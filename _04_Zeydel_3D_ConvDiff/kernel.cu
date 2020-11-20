@@ -72,7 +72,7 @@ void calc(double* O, double* u, double* v, double* w, double* mu, double* C, // 
     double* A, double* B1, double* B2, double* B3, // values
     double* B4, double* B5, double* B6, double* F, int m0) {
 
-    double B51, B61, B7, B8, B9;
+    double B51, B61, B7, B8, B9, B10, B11;
 
     int m1 = m0 + 1;
     int m2 = m0 - 1;
@@ -85,35 +85,41 @@ void calc(double* O, double* u, double* v, double* w, double* mu, double* C, // 
     int m46 = m4 - Nx * Ny;
     int m246 = m24 - Nx * Ny;
 
-    double q1 = (O[m0] + O[m4] + O[m6] + O[m46]) / 4; //заполненность области D
+    double q1 = (O[m0] + O[m4]  + O[m6]  + O[m46])  / 4; //заполненность области D
     double q2 = (O[m2] + O[m24] + O[m26] + O[m246]) / 4;
-    double q3 = (O[m0] + O[m2] + O[m6] + O[m26]) / 4;
+    double q3 = (O[m0] + O[m2]  + O[m6]  + O[m26])  / 4;
     double q4 = (O[m4] + O[m24] + O[m46] + O[m246]) / 4;
-    double q5 = (O[m0] + O[m2] + O[m4] + O[m24]) / 4;
+    double q5 = (O[m0] + O[m2]  + O[m4]  + O[m24])  / 4;
     double q6 = (O[m6] + O[m26] + O[m46] + O[m246]) / 4;
     double q0 = (q1 + q2) / 2;
 
     //Разностная схема для диффузии-конвекции в канонической форме.
     // ??????????????????????????????????????????????????????????????
     *B1 = q1 * (-(u[m1] + u[m0]) / (4 * hx) + (mu[m1] + mu[m0]) / (2 * hx * hx));
-    *B2 = q2 * ((u[m2] + u[m0]) / (4 * hx) + (mu[m2] + mu[m0]) / (2 * hx * hx));
+    *B2 = q2 * ( (u[m2] + u[m0]) / (4 * hx) + (mu[m2] + mu[m0]) / (2 * hx * hx));
     *B3 = q3 * (-(v[m3] + v[m0]) / (4 * hy) + (mu[m3] + mu[m0]) / (2 * hy * hy));
-    *B4 = q4 * ((v[m4] + v[m0]) / (4 * hy) + (mu[m4] + mu[m0]) / (2 * hy * hy));
+    *B4 = q4 * ( (v[m4] + v[m0]) / (4 * hy) + (mu[m4] + mu[m0]) / (2 * hy * hy));
+    *B5 = q5 * (-(w[m5] + w[m0]) / (4 * hz) + (mu[m5] + mu[m0]) / (2 * hz * hz));
+    *B6 = q6 * ( (w[m6] + w[m0]) / (4 * hz) + (mu[m6] + mu[m0]) / (2 * hz * hz));
 
     B61 = (1 - sigma) * (*B1);
-    B7 = (1 - sigma) * (*B2);
-    B8 = (1 - sigma) * (*B3);
-    B9 = (1 - sigma) * (*B4);
+    B7  = (1 - sigma) * (*B2);
+    B8  = (1 - sigma) * (*B3);
+    B9  = (1 - sigma) * (*B4);
+    B10 = (1 - sigma) * (*B5);
+    B11 = (1 - sigma) * (*B6);
 
     *B1 = sigma * (*B1);
     *B2 = sigma * (*B2);
     *B3 = sigma * (*B3);
     *B4 = sigma * (*B4);
+    *B5 = sigma * (*B5);
+    *B6 = sigma * (*B6);
 
-    *A = q0 / ht + (*B1) + (*B2) + (*B3) + (*B4);
-    B51 = q0 / ht - B61 - B7 - B8 - B9;
+    *A = q0 / ht + (*B1) + (*B2) + (*B3) + (*B4) + (*B5) + (*B6);
+    B51 = q0 / ht - B61 - B7 - B8 - B9 - B10 - B11;
 
-    *F = B51 * C[m0] + B61 * C[m1] + B7 * C[m2] + B8 * C[m3] + B9 * C[m4];
+    *F = B51 * C[m0] + B61 * C[m1] + B7 * C[m2] + B8 * C[m3] + B9 * C[m4] + B10 * C[m5] + B11 * C[m6];
 }
 
 __device__ int max_found = 0;
@@ -125,8 +131,18 @@ void processCalculating(double* O, double* u, double* v, double* w, double* mu, 
 
     int i = blockIdx.x * blockDim.x + threadIdx.x + 1; // +1 т.к мы начинаем с 1-го столбца
 
+    int cx = i % Nx;// Координата по x
+    int cy = i / Nx;// Координата по y
+    //if(cx == 19) printf("cx = %d, cy = %d\n", cx, cy);
+
     //if (i == 1) printf("\nlockIdx: %d %d %d \n", blockIdx.x, blockIdx.y, blockIdx.z);
     //printf("ThreadIdx: %d %d %d \n", threadIdx.x, threadIdx.y, threadIdx.z);
+    /*if (i == 1) {
+        for (size_t i = 0; i < N; i++)
+        {
+            printf("i = %d; O = %lf; u = %lf; v = %lf; w = %lf; mu = %lf\n", i, O[i], u[i], v[i], w[i], mu[i]);
+        }
+    }*/
 
     if (i >= Nx*Ny - 1) return;
 
@@ -135,6 +151,10 @@ void processCalculating(double* O, double* u, double* v, double* w, double* mu, 
         for (int k = 1; k < Nz - 1; k++) {
             calc(O, u, v, w, mu, C, &A[k], &B1[k], &B2[k],
                 &B3[k], &B4[k], &B5[k], &B6[k], &F[k], i + k * Nx*Ny);
+
+            if (B3[k] > 0 + err || B3[k] < 0 - err) {
+                printf("k = %d; A = %lf; B1 = %lf; B2 = %lf; B3 = %lf; B4 = %lf; B5 = %lf; B6 = %lf\n", k, A[k], B1[k], B2[k], B3[k], B4[k], B5[k], B6[k]);
+            }
         }
 
         // пока дельта не достигнет максимальной ошибки
