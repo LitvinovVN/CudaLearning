@@ -61,7 +61,7 @@ int main()
 	unsigned int mem_sizeA = sizeof(float) * size;
 	unsigned int mem_sizeX = sizeof(float) * (N);
 
-	//Videlenie pamyati na hoste
+	// Выделение памяти на хосте
 	hostA = (float*)malloc(mem_sizeA);
 	hostF = (float*)malloc(mem_sizeX);
 	hostX = (float*)malloc(mem_sizeX);
