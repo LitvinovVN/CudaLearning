@@ -84,7 +84,7 @@ void calc(double* O, double* u, double* v, double* w, double* mu, double* C, // 
     int m26 = m2 - Nx * Ny;
     int m46 = m4 - Nx * Ny;
     int m246 = m24 - Nx * Ny;
-
+    
     double q1 = (O[m0] + O[m4]  + O[m6]  + O[m46])  / 4; //заполненность области D
     double q2 = (O[m2] + O[m24] + O[m26] + O[m246]) / 4;
     double q3 = (O[m0] + O[m2]  + O[m6]  + O[m26])  / 4;
@@ -129,13 +129,17 @@ void processCalculating(double* O, double* u, double* v, double* w, double* mu, 
     double A[Nz], B1[Nz], B2[Nz], B3[Nz], B4[Nz], B5[Nz], B6[Nz], F[Nz];
     double t = 0;
 
+    //printf("blockIdx.x = %d, threadIdx.x = %d\n", blockIdx.x, threadIdx.x);
+
     int i = blockIdx.x * blockDim.x + threadIdx.x + 1; // +1 т.к мы начинаем с 1-го столбца
 
     int cx = i % Nx;// Координата по x
     int cy = i / Nx;// Координата по y
-    //if(cx == 19) printf("cx = %d, cy = %d\n", cx, cy);
 
-    //if (i == 1) printf("\nlockIdx: %d %d %d \n", blockIdx.x, blockIdx.y, blockIdx.z);
+    //if (i == 39) { printf("i=%d, cx = %d, cy = %d\n", i, cx, cy); }
+    //printf("i = %d; cx = %d, cy = %d\n", i, cx, cy);
+
+    //if (i == 39) printf("\nblockIdx: %d %d %d \n", blockIdx.x, blockIdx.y, blockIdx.z);
     //printf("ThreadIdx: %d %d %d \n", threadIdx.x, threadIdx.y, threadIdx.z);
     /*if (i == 1) {
         for (size_t i = 0; i < N; i++)
@@ -143,35 +147,38 @@ void processCalculating(double* O, double* u, double* v, double* w, double* mu, 
             printf("i = %d; O = %lf; u = %lf; v = %lf; w = %lf; mu = %lf\n", i, O[i], u[i], v[i], w[i], mu[i]);
         }
     }*/
-
+    
     if (i >= Nx*Ny - 1) return;
 
-    do {
+    do {        
         // рассчитываем новые значения
         for (int k = 1; k < Nz - 1; k++) {
+            int globalIndex = i + k * Nx * Ny;            
             calc(O, u, v, w, mu, C, &A[k], &B1[k], &B2[k],
-                &B3[k], &B4[k], &B5[k], &B6[k], &F[k], i + k * Nx*Ny);
-
-            if (B3[k] > 0 + err || B3[k] < 0 - err) {
+                &B3[k], &B4[k], &B5[k], &B6[k], &F[k], globalIndex);
+                        
+            /*if (i == 39) {
                 printf("k = %d; A = %lf; B1 = %lf; B2 = %lf; B3 = %lf; B4 = %lf; B5 = %lf; B6 = %lf\n", k, A[k], B1[k], B2[k], B3[k], B4[k], B5[k], B6[k]);
-            }
+            }*/
         }
 
         // пока дельта не достигнет максимальной ошибки
         do {
             atomicCAS(&max_found, 1, 0);
-            for (int j = 1; j < 2 * Ny - 3; j++) {
+            for (int k = 1; k < 2 * Ny - 3; k++) {
                 // рассчитываем новые значения
-                int m0 = i + (j - i + 1) * Nx, m1, m2, m3, m4;
-                int k = m0 / Nx;
+                int m0 = i + k * Nx * Ny, m1, m2, m3, m4, m5, m6;
+                int koeff = m0 / Nx;
                 double w = C[m0];
 
-                if (i > j || (j - i) >= (Nx - 2)) goto l_break;
-
+                //if (i > j || (j - i) >= (Nx - 2)) goto l_break;
+                
                 m1 = m0 + 1;
                 m2 = m0 - 1;
                 m3 = m0 + Nx;
-                m4 = m0 - Nx;
+                m4 = m0 - Nx;                
+                m5 = m0 + Nx * Ny;
+                m6 = m0 - Nx * Ny;
 
                 C[m0] = (F[k] + B1[k] * C[m1] + B2[k] * C[m2] + B3[k] * C[m3] + B4[k] * C[m4]) / A[k];
 

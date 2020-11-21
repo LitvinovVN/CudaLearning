@@ -106,10 +106,10 @@ __global__
 void processCalculating(double* O, double* u, double* v, double* mu, double* C) {
     double A[Ny], B1[Ny], B2[Ny], B3[Ny], B4[Ny], F[Ny];
     double t = 0;
-
+    
     int i = blockIdx.x * blockDim.x + threadIdx.x + 1; // +1 т.к мы начинаем с 1-го столбца
     if (i >= Nx - 1) return;
-
+    
     do {
         // рассчитываем новые значения
         for (int j = 1; j < Ny - 1; j++) {
@@ -118,13 +118,14 @@ void processCalculating(double* O, double* u, double* v, double* mu, double* C) 
         }
 
         // пока дельта не достигнет максимальной ошибки
-        do {
+        do {            
             atomicCAS(&max_found, 1, 0);
-            for (int j = 1; j < 2 * Ny - 3; j++) {
+            for (int j = 1; j < 2 * Ny - 3; j++) {                
                 // рассчитываем новые значения
                 int m0 = i + (j - i + 1) * Nx, m1, m2, m3, m4;
-                int k = m0 / Nx;
+                int k = m0 / Nx;                
                 double w = C[m0];
+                               
 
                 if (i > j || (j - i) >= (Nx - 2)) goto l_break;
 
