@@ -17,13 +17,8 @@ using namespace std;
 
 #define CudaCoresNumber 192 // Количество ядер cuda (https://geforce-gtx.com/710.html - для GT710, для другой видеокарты необходимо уточнить)
 
-
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
-
-int Add2Vectors(bool& retflag);
 void Print3dArray(int* host_c);
 void ConveyorTest();
-
 
 /// <summary>
 /// Отображает параметры видеоадаптера
@@ -58,6 +53,8 @@ void ShowGridProperties()
     printf("----------------------------------------------------------\n");
 }
 
+
+
 int main()
 {
     // Включение поддержки кириллицы в консоли
@@ -68,11 +65,7 @@ int main()
     ShowGridProperties();     
     // Тест конвейера вычислений
     ConveyorTest();
-
-    bool retflag;
-    int retval = Add2Vectors(retflag);
-    if (retflag) return retval;
-
+    
     return 0;
 }
 
@@ -83,7 +76,7 @@ int main()
 /// <param name="size"></param>
 /// <returns></returns>
 __global__ void initVectorInGpuKernel(int* c, unsigned int size)
-{
+{        
     // Compute the offset in each dimension
     const size_t offsetX = blockDim.x * blockIdx.x + threadIdx.x;
     const size_t offsetY = blockDim.y * blockIdx.y + threadIdx.y;
@@ -94,18 +87,28 @@ __global__ void initVectorInGpuKernel(int* c, unsigned int size)
         return;
 
     // Compute the linear index assuming that X,Y then Z memory ordering
-    const size_t idx = offsetZ * GridNx * GridNy + offsetY * GridNx + offsetX;
-    printf("blockIdx.x = %d, blockIdx.y = %d, i = %d\n", blockIdx.x, blockIdx.y, idx);
-    printf("offsetX = %d, offsetY = %d, offsetZ = %d \n", offsetX, offsetY, offsetZ);
+    const size_t idx = offsetZ * GridNx * GridNy + offsetY * GridNx + offsetX;    
+
+    if (threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0 && blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0)
+    {
+        printf("\n--------------initVectorInGpuKernel-------------------\n");
+        printf("threadIdx.x = %d, threadIdx.y = %d, threadIdx.z = %d\n", threadIdx.x, threadIdx.y, threadIdx.z);
+        printf("blockIdx.x = %d,  blockIdx.y = %d,  blockIdx.z = %d\n", blockIdx.x,   blockIdx.y,  blockIdx.y);
+        printf("blockDim.x = %d,  blockDim.y = %d , blockDim.z = %d\n", blockDim.x,   blockDim.y,  blockDim.z);
+        printf("offsetX = %d,     offsetY = %d,     offsetZ = %d\n",    offsetX,      offsetY,     offsetZ);
+        printf("idx = %d\n", idx);
+        printf("\n-----------initVectorInGpuKernel (end)--------------\n");
+    }
+
     
     long nodeIndex = idx;
     for (size_t z = 0; z < GridNz; z++)
-    {
-        nodeIndex += GridNx * GridNy;
+    {        
         if (idx < size)
         {
             c[nodeIndex] = nodeIndex;
         }
+        nodeIndex += GridNx * GridNy;
     }        
 }
 
@@ -113,7 +116,7 @@ __global__ void initVectorInGpuKernel(int* c, unsigned int size)
 /// Увеличивает в 2 раза значения в элементах, сумма индексов которых равна s
 /// </summary>
 /// <param name="c"></param>
-/// <param name="size">Кол-во элементов вектора c</param>
+/// <param name="size">Кол-во элементов вектора s</param>
 /// <param name="s">i+j+k</param>
 /// <returns></returns>
 __global__ void conveyorKernel(int* c, unsigned int size, int s)
@@ -121,25 +124,25 @@ __global__ void conveyorKernel(int* c, unsigned int size, int s)
     // Compute the offset in each dimension
     const size_t offsetX = blockDim.x * blockIdx.x + threadIdx.x;
     const size_t offsetY = blockDim.y * blockIdx.y + threadIdx.y;
-    const size_t offsetZ = blockDim.z * blockIdx.z + threadIdx.z;
+    //const size_t offsetZ = blockDim.z * blockIdx.z + threadIdx.z;
 
     // Make sure that you are not actually outs
-    if (offsetX >= GridNx || offsetY >= GridNy || offsetZ >= GridNz)
+    if (offsetX >= GridNx || offsetY >= GridNy /*|| offsetZ >= GridNz*/)
         return;
 
     // Compute the linear index assuming that X,Y then Z memory ordering
-    const size_t idx = offsetZ * GridNx * GridNy + offsetY * GridNx + offsetX;
+    const size_t idx = /*offsetZ * GridNx * GridNy +*/ offsetY * GridNx + offsetX;
     //printf("blockIdx.x = %d, blockIdx.y = %d, i = %d\n", blockIdx.x, blockIdx.y, idx);
     //printf("offsetX = %d, offsetY = %d, offsetZ = %d \n", offsetX, offsetY, offsetZ);
 
     long nodeIndex = idx;    
     for (size_t z = 0; z < GridNz; z++)
-    {
-        nodeIndex += GridNx * GridNy;
-        if (idx < size && (offsetX + offsetY + offsetZ) == s)
+    {        
+        if (idx < size && (offsetX + offsetY + z) == s)
         {
-            c[nodeIndex] = c[nodeIndex] * 2;
+            c[nodeIndex] = c[nodeIndex] + 1000;
         }
+        nodeIndex += GridNx * GridNy;
     }
 }
 
@@ -181,23 +184,35 @@ void ConveyorTest()
         return;
     }
     
-    // 3. Инициализируем массив на GPU
-    initVectorInGpuKernel <<< dim3(GridNx, GridNy), 1 >>> (dev_c, GridN);
+    // 4. Настраиваем параметры блоков CUDA
+    dim3 blocks(GridNx, GridNy);
+
+    // 4. Инициализируем массив на GPU
+    initVectorInGpuKernel <<< blocks, 1 >>> (dev_c, GridN);
     cudaDeviceSynchronize();
 
-    // 4. Старт конвейера
-    int s = 1;
-    //conveyorKernel <<< dim3(GridNx, GridNy), 1 >>> (dev_c, GridN, s);
+    // 5. Старт конвейера
+    int s = 3;
+    conveyorKernel <<< blocks, 1 >>> (dev_c, GridN, s);
     cudaDeviceSynchronize();
 
+    // Копируем массив с результатами вычислений из памяти GPU в ОЗУ
     cudaMemcpy(host_c, dev_c, sizeInBytesInt, cudaMemcpyDeviceToHost);
-        
+    
+    // Выводим на консоль массив с результатами вычислений
     Print3dArray(host_c);
     
 
     // Удаляем буферы памяти
     free(host_c);
     cudaFree(dev_c);
+
+    // Сбрасываем устройство CUDA
+    cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaDeviceReset failed!");
+        return;
+    }
 
     printf("--------------Тест конвейерного вычисления (конец)------------\n");
 }
@@ -208,127 +223,4 @@ __global__ void conveyorTestKernel(int* c, const int* a, const int* b)
 {
     int i = threadIdx.x;
     c[i] = a[i] + b[i];
-}
-
-
-
-
-/// <summary>
-/// Сложение двух векторов
-/// </summary>
-/// <param name="retflag"></param>
-/// <returns></returns>
-int Add2Vectors(bool& retflag)
-{
-    retflag = true;
-    const int arraySize = GridN;
-    const int a[arraySize] = { 1, 2, 3, 4, 5 };
-    const int b[arraySize] = { 10, 20, 30, 40, 50 };
-    int c[arraySize] = { 0 };
-
-    // Add vectors in parallel.
-    cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addWithCuda failed!");
-        return 1;
-    }
-
-    printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n",
-        c[0], c[1], c[2], c[3], c[4]);
-
-    // cudaDeviceReset must be called before exiting in order for profiling and
-    // tracing tools such as Nsight and Visual Profiler to show complete traces.
-    cudaStatus = cudaDeviceReset();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceReset failed!");
-        return 1;
-    }
-    retflag = false;
-    return {};
-}
-
-__global__ void addKernel(int* c, const int* a, const int* b)
-{
-    int i = threadIdx.x;
-    c[i] = a[i] + b[i];
-}
-
-// Helper function for using CUDA to add vectors in parallel.
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
-{
-    int *dev_a = 0;
-    int *dev_b = 0;
-    int *dev_c = 0;
-    cudaError_t cudaStatus;
-
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-        goto Error;
-    }
-
-    // Allocate GPU buffers for three vectors (two input, one output)    .
-    cudaStatus = cudaMalloc((void**)&dev_c, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
-
-    cudaStatus = cudaMalloc((void**)&dev_a, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
-
-    cudaStatus = cudaMalloc((void**)&dev_b, size * sizeof(int));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
-
-    // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-    cudaStatus = cudaMemcpy(dev_b, b, size * sizeof(int), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-    // Launch a kernel on the GPU with one thread for each element.
-    addKernel<<<size, 1>>>(dev_c, dev_a, dev_b);
-
-    // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-        goto Error;
-    }
-    
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
-
-    // Copy output vector from GPU buffer to host memory.
-    cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
-
-Error:
-    cudaFree(dev_c);
-    cudaFree(dev_a);
-    cudaFree(dev_b);
-    
-    return cudaStatus;
 }
