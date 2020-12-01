@@ -187,13 +187,18 @@ void ConveyorTest()
     // 4. Настраиваем параметры блоков CUDA
     dim3 blocks(GridNx, GridNy);
 
-    // 4. Инициализируем массив на GPU
+    // 5. Инициализируем массив на GPU
     initVectorInGpuKernel <<< blocks, 1 >>> (dev_c, GridN);
     cudaDeviceSynchronize();
 
-    // 5. Старт конвейера
-    int s = 3;
-    conveyorKernel <<< blocks, 1 >>> (dev_c, GridN, s);
+    // 6. Старт конвейера
+    //int s = 3;
+    //conveyorKernel << < blocks, 1 >> > (dev_c, GridN, s);
+    for (size_t i = 0; i < GridNx; i++)
+    {
+        conveyorKernel << < blocks, 1 >> > (dev_c, GridN, i);
+    }
+    
     cudaDeviceSynchronize();
 
     // Копируем массив с результатами вычислений из памяти GPU в ОЗУ
