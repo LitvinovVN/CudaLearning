@@ -4,11 +4,14 @@
 //#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-//#include <time.h>
+#include <time.h>
 //#include <cstring>
 #include "locale.h"
 #include <malloc.h>
+#include <stdlib.h>
 using namespace std;
+
+#define BLOCK_SIZE 256
 
 #define GridNx 5 // Размерность расчетной сетки по оси x
 #define GridNy 6 // Размерность расчетной сетки по оси y
@@ -22,8 +25,90 @@ using namespace std;
 
 void Print3dArray(int* host_c);
 void Print3dArrayDouble(double* host_c);
+double Reduce(double* data, long n);
 
 void PtmTest();
+void ReductionTest();
+
+__global__ void reduceKernel(double* inData, double* outData)
+{
+    __shared__ double data[BLOCK_SIZE];
+    int tid = threadIdx.x;
+    int i = 2 * blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Записать сумму первых двух элементов в разделяемую память
+    data[tid] = inData[i] + inData[i + blockDim.x];
+    
+    __syncthreads();  // Дождаться загрузки данных
+
+    for (int s = blockDim.x / 2; s > 32; s >>= 1)
+    {
+        if (tid < s)
+        {
+            data[tid] += data[tid + s];
+        }
+
+        __syncthreads();
+    }
+
+    if (tid < 32)  // Развернуть последние итерации
+    {
+        data[tid] += data[tid + 32];
+        data[tid] += data[tid + 16];
+        data[tid] += data[tid + 8];
+        data[tid] += data[tid + 4];
+        data[tid] += data[tid + 2];
+        data[tid] += data[tid + 1];
+    }
+
+    if (tid == 0)  // Сохранить сумму элементов блока
+    {
+        outData[blockIdx.x] = data[0];        
+    }
+}
+
+/// <summary>
+/// Суммирование массива редукцией
+/// </summary>
+/// <param name="data"></param>
+/// <param name="n"></param>
+/// <returns></returns>
+double Reduce(double* data, long n)
+{
+    printf("78: n = %d\n", n);
+    double* sums = NULL;
+    int numBlocks = n / 512;
+    double res = 0;
+
+    // Выделяем память под массив сумм блоков
+    cudaMalloc( (void**) &sums, numBlocks * sizeof(double));
+
+    // Проводим поблочную редукцию, записав суммы для каждого блока в массив sums
+    reduceKernel << <dim3(numBlocks), dim3(BLOCK_SIZE) >> > (data, sums);
+
+    // Редуцируем массив сумм для блоков
+    if (numBlocks > BLOCK_SIZE)
+    {
+        res = Reduce(sums, numBlocks);
+    }
+    else
+    {
+        double* sumsHost = new double[numBlocks];
+
+        cudaMemcpy(sumsHost, sums, numBlocks * sizeof(double), cudaMemcpyDeviceToHost);
+
+        for (int i = 0; i < numBlocks; i++)
+        {
+            res += sumsHost[i];
+        }
+
+        delete[] sumsHost;
+    }
+
+    cudaFree(sums);
+    return res;
+}
+
 
 /// <summary>
 /// Отображает параметры видеоадаптера
@@ -70,6 +155,8 @@ int main()
     ShowGridProperties();
     // Тест конвейера вычислений
     PtmTest();
+    // Тест редукции массива
+    ReductionTest();
 
     return 0;
 }
@@ -512,6 +599,9 @@ void PtmTest()
 
     // Вычисляем скалярные произведения
     awrRrKernel << < blocks, 1 >> > (dev_Awr, dev_Rr, dev_crr, dev_r, dev_c0, dev_c1, dev_c2, dev_c3, dev_c4, dev_c5, dev_c6, GridN);
+    cudaDeviceSynchronize();
+
+    int sum_dev_Awr = Reduce(dev_Awr, GridN);
 
     // Копируем массив с результатами вычислений из памяти GPU в ОЗУ
     cudaMemcpy(host_r, dev_r, sizeInBytesDouble, cudaMemcpyDeviceToHost);
@@ -556,4 +646,34 @@ void PtmTest()
     cudaDeviceReset();    
 
     printf("--------------Тест конвейерного вычисления (конец)------------\n");
+}
+
+void ReductionTest()
+{
+    // 1. Вычисляем размер массива данных
+    int size = 100000; // Кол-во элементов  
+    
+    size_t sizeInBytesDouble = size * sizeof(double);// Размер массива double в байтах
+
+    // 2. Выделяем память под массив в ОЗУ    
+    double* host_a = (double*)malloc(sizeInBytesDouble);
+ 
+    // 2a Инициализация массива, вычисление суммы элементов массива
+    double host_a_sum = 0;
+    for (size_t k = 0; k < size; k++)
+    {
+        host_a[k] = k + 0.2;            
+        host_a_sum += host_a[k];
+    }
+
+    // 3. Выделяем память под массив на видеокарте    
+    double* dev_a = NULL;
+    cudaMalloc((void**)&dev_a, sizeInBytesDouble);
+
+    // 4. Копируем массив из ОЗУ в GPU
+    cudaMemcpy(dev_a, host_a, sizeInBytesDouble, cudaMemcpyHostToDevice);
+
+    double dev_a_sum = Reduce(dev_a, size);
+
+    printf("host_a_sum = %lf\ndev_a_sum = %lf\n", host_a_sum, dev_a_sum);
 }
