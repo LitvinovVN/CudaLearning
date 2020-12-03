@@ -13,9 +13,9 @@ using namespace std;
 
 #define BLOCK_SIZE 256
 
-#define GridNx 5 // Размерность расчетной сетки по оси x
-#define GridNy 6 // Размерность расчетной сетки по оси y
-#define GridNz 10 // Размерность расчетной сетки по оси z
+#define GridNx 100 // Размерность расчетной сетки по оси x
+#define GridNy 100 // Размерность расчетной сетки по оси y
+#define GridNz 160 // Размерность расчетной сетки по оси z
 #define GridN GridNx*GridNy*GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
 
@@ -29,6 +29,43 @@ double Reduce(double* data, long n);
 
 void PtmTest();
 void ReductionTest();
+
+#pragma region Kernels
+
+__global__ void uKernel(double* u, double* r, long size, double tay)
+{
+    const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
+    const size_t threadY = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (threadX >= GridNx - 1 || threadY >= GridNy - 1 || threadX == 0 || threadY == 0)
+        return;
+
+    const size_t idx = threadY * GridNx + threadX;
+        
+    long nodeIndex = idx;
+    for (size_t z = 1; z < GridNz - 1; z++)
+    {
+        long m0 = nodeIndex + z * GridXY;        
+
+        if (nodeIndex < size)
+        {
+            u[m0] = u[m0] + tay * r[m0];
+        }
+    }
+}
+
+__global__ void sumElFromN1ToN2Kernel(double* sum, double* data, long N1, long N2)
+{
+    *sum = 0;
+    if (threadIdx.x == 0)
+    {
+        for (size_t i = N1; i <= N2; i++)
+        {
+            *sum += data[i];
+            //printf("sumElFromN1ToN2Kernel, 41: *sum = %lf", *sum);
+        }        
+    }
+}
 
 __global__ void reduceKernel(double* inData, double* outData)
 {
@@ -67,6 +104,8 @@ __global__ void reduceKernel(double* inData, double* outData)
     }
 }
 
+#pragma endregion Kernels
+
 /// <summary>
 /// Суммирование массива редукцией
 /// </summary>
@@ -75,10 +114,26 @@ __global__ void reduceKernel(double* inData, double* outData)
 /// <returns></returns>
 double Reduce(double* data, long n)
 {
-    printf("78: n = %d\n", n);
+    double res = 0;
+
     double* sums = NULL;
     int numBlocks = n / 512;
-    double res = 0;
+
+    //tex:
+    // Суммируем элементы в хвосте массива от $$numBlocks \times 512$$ до $$n - 1$$ 
+    double sumRight = 0;
+    long N1 = numBlocks * 512;
+    long N2 = n - 1;
+    //printf("N1 = %d\n", N1);
+    //printf("N2 = %d\n", N2);
+    
+    double* dev_sumRight = NULL;
+    cudaMalloc((void**)&dev_sumRight, sizeof(double));
+    sumElFromN1ToN2Kernel <<< 1, 1 >> > (dev_sumRight, data, N1, N2);
+    cudaMemcpy(&sumRight, dev_sumRight, sizeof(double), cudaMemcpyDeviceToHost);
+    //printf("sumRight = %lf\n", sumRight);
+    
+    res += sumRight;
 
     // Выделяем память под массив сумм блоков
     cudaMalloc( (void**) &sums, numBlocks * sizeof(double));
@@ -156,7 +211,7 @@ int main()
     // Тест конвейера вычислений
     PtmTest();
     // Тест редукции массива
-    ReductionTest();
+    // ReductionTest();
 
     return 0;
 }
@@ -232,17 +287,17 @@ __global__ void nevyazkaKernel(double* r, double* c0, double* c1, double* c2, do
         if (idx < size)
         {
             r[m0] = f[m0] - c0[m0] * u[m0] + (c1[m0] * u[m1] + c2[m0] * u[m2] + c3[m0] * u[m3] + c4[m0] * u[m4] + c5[m0] * u[m5] + c6[m0] * u[m6]);
-            printf("r[%d] = %lf; \n",m0, r[m0]);
+            //printf("r[%d] = %lf; \n",m0, r[m0]);
         }        
     }    
 }
 
 __global__ void nevyazkaGreaterEpsKernel(int* isGreater, double* r, unsigned int size, double eps)
 {
-    printf("----!!!!!!!!!! 170 !!!!!!!! isGreater = %d--------\n", *isGreater);
+    //printf("----!!!!!!!!!! 170 !!!!!!!! isGreater = %d--------\n", *isGreater);
     if (*isGreater > 0)
     {
-        printf("----!!!!!!!!!! 172 !!!!!!!! isGreater = %d| isGreater > 0 ---> return; --------\n", *isGreater);
+        //printf("----!!!!!!!!!! 172 !!!!!!!! isGreater = %d| isGreater > 0 ---> return; --------\n", *isGreater);
         return;
     }
     
@@ -261,13 +316,8 @@ __global__ void nevyazkaGreaterEpsKernel(int* isGreater, double* r, unsigned int
         
         if (r[m0] > eps && *isGreater == 0)
         {            
-            if (*isGreater > 0)
-            {
-                printf("----!!!!!!! 195 !!!!!!!!!!! isGreater = %d| isGreater > 0 ---> return; --------\n", *isGreater);
-                return;
-            }
             atomicExch(isGreater, 1);
-            printf("----!!!!!!!!!--- 199 ---!!!!!!!!!r[%d] = %lf; isGreater = %d--------\n", m0, r[m0], *isGreater);
+            //printf("----!!!!!!!!!--- 199 ---!!!!!!!!!r[%d] = %lf; isGreater = %d--------\n", m0, r[m0], *isGreater);
             return;
         }
     }
@@ -392,7 +442,7 @@ __global__ void awrRrKernel(double* Awr, double* Rr, double* crr, double* r, dou
         }
     }
 
-    __syncthreads();
+    /*__syncthreads();
     if (threadX == 1 && threadY == 1)
     {
         printf("\n\n ------------------- Print3dArrayDouble(Awr) ---------------------\n\n");
@@ -411,7 +461,7 @@ __global__ void awrRrKernel(double* Awr, double* Rr, double* crr, double* r, dou
     {
         printf("\n\n ------------------- Print3dArrayDouble(crr) ---------------------\n\n");
         Print3dArrayDouble(crr);
-    }
+    }*/
 }
 
 void Print3dArray(int* host_c)
@@ -566,50 +616,140 @@ void PtmTest()
     // 5. Настраиваем параметры блоков CUDA
     dim3 blocks(GridNx, GridNy);
     
-    // do...
-
-    // Вычисление вектора невязки
-    nevyazkaKernel <<< blocks, 1 >>> (dev_r, dev_c0, dev_c1, dev_c2, dev_c3, dev_c4, dev_c5, dev_c6, dev_f, dev_u, GridN);
-    cudaDeviceSynchronize();
-
-    // Определение, превышает ли хотя бы один элемент вектора невязки максимальное значение ошибки    
+    int it = 1;
     int host_isGreater = 0;
     int* dev_isGreater = NULL;
-    cudaMalloc((void**)&dev_isGreater, sizeof(int));    
-    nevyazkaGreaterEpsKernel << <blocks, 1 >> > (dev_isGreater, dev_r, GridN, EPS);
-    cudaDeviceSynchronize();    
-    cudaMemcpy(&host_isGreater, dev_isGreater, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-    printf("\n-------host_isGreater = %d----------\n", host_isGreater);
-    // ... while()
+    cudaMalloc((void**)&dev_isGreater, sizeof(int));
 
-    // 6. Старт конвейера
-    double omega = 0.05;// Уточнить стартовое значение????????????????????????
-    
-    for (size_t i = 3; i < GridNx + GridNy + GridNz - 3; i++)
+    float gpuTime = 0.0f;
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    do
     {
-        ptmKernel1 << < blocks, 1 >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, i, omega);
-    }
-    cudaDeviceSynchronize();
+        printf("-----------------------------------------------------------\n");
+        printf("-------------Start of PTM Iteration------------------------\n");
+        
+        cudaEventRecord(start, 0);
 
-    for (size_t i = GridNx + GridNy + GridNz - 3; i >= 3 ; i--)
-    {
-        ptmKernel2 << < blocks, 1 >> > (dev_r, dev_c0, dev_c1, dev_c3, dev_c5, GridN, i, omega);
-    }
+        // Вычисление вектора невязки
+        nevyazkaKernel << < blocks, 1 >> > (dev_r, dev_c0, dev_c1, dev_c2, dev_c3, dev_c4, dev_c5, dev_c6, dev_f, dev_u, GridN);
+        cudaDeviceSynchronize();
 
-    // Вычисляем скалярные произведения
-    awrRrKernel << < blocks, 1 >> > (dev_Awr, dev_Rr, dev_crr, dev_r, dev_c0, dev_c1, dev_c2, dev_c3, dev_c4, dev_c5, dev_c6, GridN);
-    cudaDeviceSynchronize();
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&gpuTime, start, stop);
+        printf("nevyazkaKernelTime = %f\n", gpuTime);
 
-    int sum_dev_Awr = Reduce(dev_Awr, GridN);
+
+        cudaEventRecord(start, 0);
+
+        // Определение, превышает ли хотя бы один элемент вектора невязки максимальное значение ошибки        
+        nevyazkaGreaterEpsKernel << <blocks, 1 >> > (dev_isGreater, dev_r, GridN, EPS);
+        cudaDeviceSynchronize();
+        cudaMemcpy(&host_isGreater, dev_isGreater, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
+        //printf("host_isGreater = %d----------\n", host_isGreater);
+        // ... while()
+
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&gpuTime, start, stop);
+        printf("nevyazkaGreaterEpsKernel = %f\n", gpuTime);
+
+
+        //cudaEventRecord(start, 0);
+
+        // 6. Старт конвейера    
+        double omega = 0.05;// Уточнить стартовое значение????????????????????????
+        double tay = 2 * omega;
+
+        printf("--- ptmKernel1 Starting... ---\n", gpuTime);
+        for (size_t i = 3; i < GridNx + GridNy + GridNz - 3; i++)
+        {
+            cudaEventRecord(start, 0);
+            ptmKernel1 << < blocks, 1 >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, i, omega);
+            cudaEventRecord(stop, 0);
+            cudaEventSynchronize(stop);
+            cudaEventElapsedTime(&gpuTime, start, stop);
+            printf("ptmKernel1. i = %d; gpuTime = %f\n", i, gpuTime);
+        }
+        printf("--- ptmKernel1 End ---\n", gpuTime);
+        cudaDeviceSynchronize();
+
+        /*cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&gpuTime, start, stop);
+        printf("ptmKernel1 = %f\n", gpuTime);*/
+
+
+        cudaEventRecord(start, 0);
+
+        for (size_t i = GridNx + GridNy + GridNz - 3; i >= 3; i--)
+        {
+            ptmKernel2 << < blocks, 1 >> > (dev_r, dev_c0, dev_c1, dev_c3, dev_c5, GridN, i, omega);
+        }
+
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&gpuTime, start, stop);
+        printf("ptmKernel2 = %f\n", gpuTime);
+
+
+        cudaEventRecord(start, 0);
+
+        // Вычисляем скалярные произведения
+        printf("--- awrRrKernel Starting... ---\n");
+        awrRrKernel << < blocks, 1 >> > (dev_Awr, dev_Rr, dev_crr, dev_r, dev_c0, dev_c1, dev_c2, dev_c3, dev_c4, dev_c5, dev_c6, GridN);
+        cudaDeviceSynchronize();
+        printf("--- awrRrKernel Ended ---\n");
+
+        printf("--- RwRw = Reduce(dev_Rr, GridN); Starting... ---\n");
+        double RwRw = Reduce(dev_Rr, GridN);
+        printf("--- RwRw = Reduce(dev_Rr, GridN); Ended ---\n");
+        printf("--- Aww = Reduce(dev_Awr, GridN); Starting... ---\n");
+        double Aww = Reduce(dev_Awr, GridN);
+        printf("--- Aww = Reduce(dev_Awr, GridN); Ended ---\n");
+        printf("--- ww = Reduce(dev_crr, GridN); Starting... ---\n");
+        double ww = Reduce(dev_crr, GridN);
+        printf("--- ww = Reduce(dev_crr, GridN); Ended ---\n");
+        //printf("RwRw = %lf\n", RwRw);
+        //printf("Aww = %lf\n", Aww);
+        //printf("ww = %lf\n", ww);
+
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&gpuTime, start, stop);
+        printf("awrRrKernel + RwRw + Aww + ww = %f\n", gpuTime);
+
+
+        cudaEventRecord(start, 0);
+        if (ww > 0)
+        {
+            tay = 2 * omega + ww / Aww;
+            omega = sqrt(ww / RwRw);
+        }
+
+        // Перерасчет dev_u
+        uKernel << < blocks, 1 >> > (dev_u, dev_r, GridN, tay);                       
+
+        it++;
+
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&gpuTime, start, stop);
+        printf("uKernel = %f\n", gpuTime);
+        printf("-------------End of PTM Iteration------------------------\n");
+    } while (host_isGreater > 0 && it < 2/*200*/);
 
     // Копируем массив с результатами вычислений из памяти GPU в ОЗУ
-    cudaMemcpy(host_r, dev_r, sizeInBytesDouble, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(host_r, dev_r, sizeInBytesDouble, cudaMemcpyDeviceToHost);
+    cudaMemcpy(host_u, dev_u, sizeInBytesDouble, cudaMemcpyDeviceToHost);
 
     cudaDeviceSynchronize();
     // Выводим на консоль массив с результатами вычислений
-    Print3dArrayDouble(host_r);
-
+    //Print3dArrayDouble(host_r);
+    //Print3dArrayDouble(host_u);
 
     // Удаляем буферы памяти
     free(host_c0);
