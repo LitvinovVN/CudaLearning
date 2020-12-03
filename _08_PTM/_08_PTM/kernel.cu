@@ -1,15 +1,25 @@
 #include "cuda_runtime.h"
-//#include "cuda.h"
 #include "device_launch_parameters.h"
-//#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
-//#include <cstring>
 #include "locale.h"
 #include <malloc.h>
 #include <stdlib.h>
 using namespace std;
+
+//////////////// Результаты ////////////////
+// GT710 2Gb, Core i5-7400 3GHz, 16 Gb ОЗУ
+// 100x100x160
+// nevyazkaKernelTime = 2019 ms
+// nevyazkaGreaterEpsKernel = 0.9 ms
+// ptmKernel1. i = 3;   gpuTime = 86.5 ms
+// ptmKernel1. i = 182; gpuTime = 92.09 ms
+// ptmKernel1. i = 356; gpuTime = 86.9 ms
+// ptmKernel2 = 39647 ms
+// awrRrKernel + RwRw + Aww + ww = 3029 ms
+// uKernel = 281 ms
+////////////////////////////////////////////
 
 #define BLOCK_SIZE 256
 
