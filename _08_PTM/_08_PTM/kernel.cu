@@ -20,6 +20,17 @@ using namespace std;
 // awrRrKernel + RwRw + Aww + ww = 3029 ms
 // uKernel = 281 ms
 ////////////////////////////////////////////
+// GTX 750 Ti, Core i5-6600 3.3GHz, 32 Gb ÎÇÓ
+// 100x100x160
+// nevyazkaKernelTime = 195 ms
+// nevyazkaGreaterEpsKernel = 1.9 ms
+// ptmKernel1. i = 3;   gpuTime = 15.3 ms
+// ptmKernel1. i = 182; gpuTime = 15.7 ms
+// ptmKernel1. i = 356; gpuTime = 15.0 ms
+// ptmKernel2 = 5417 ms
+// awrRrKernel + RwRw + Aww + ww = 319 ms
+// uKernel = 137.7 ms
+////////////////////////////////////////////
 
 #define BLOCK_SIZE 256
 
