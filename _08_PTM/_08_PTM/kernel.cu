@@ -198,8 +198,40 @@ void ShowVideoadapterProperties() {
         cudaGetDeviceProperties(&prop, i);
         printf("Наименование устройства:        %s\n", prop.name);
         printf("Вычислительные возможности:     %d.%d\n", prop.major, prop.minor);
+        printf("Тактовая частота:               %d МГц\n", prop.clockRate/1000);
+        printf("Перекрытие копирования (уст.): ");
+        if (prop.deviceOverlap)
+        {
+            printf("Разрешено\n");
+        }
+        else
+        {
+            printf("Запрещено\n");
+        }
+        printf("Тайм-аут выполнения ядра: ");
+        if (prop.kernelExecTimeoutEnabled)
+        {
+            printf("Включен\n");
+        }
+        else
+        {
+            printf("Выключен\n");
+        }
+        printf("Количество асинхронных DMA движков: %d (1: копирование данных + ядро, 2: копирование данных up + копирование данных down + ядро)\n", prop.asyncEngineCount);
+        
+        printf("------------ Информация о памяти ---------------\n");
+        printf("Всего глобальной памяти:        %ld байт\n", prop.totalGlobalMem);
+        printf("Всего константной памяти:       %ld байт\n", prop.totalConstMem);
+
+        printf("------------ Информация о мультипроцессорах ---------------\n");
         printf("Количество мультипроцессоров:   %d\n", prop.multiProcessorCount);
+        printf("Количество распределяемой памяти на 1 блок:   %d байт\n", prop.sharedMemPerBlock);
+        printf("Количество распределяемой памяти на 1 мультипроцессор:   %ld байт\n", prop.sharedMemPerMultiprocessor);
+        printf("Количество 32х-битных регистров на 1 блок:   %d байт\n", prop.regsPerBlock);
         printf("Размер warp'а:                  %d\n", prop.warpSize);
+        printf("Максимальное количество нитей в блоке: %d\n", prop.maxThreadsPerBlock);
+        printf("Максимальное количество нитей в блоке: (%d, %d, %d)\n", prop.maxThreadsDim[0], prop.maxThreadsDim[1], prop.maxThreadsDim[2]);
+        printf("Максимальные размеры сетки: (%ld, %d, %d)\n", prop.maxGridSize[0], prop.maxGridSize[1], prop.maxGridSize[2]);
     }
 
     printf("Количество ядер cuda: %d (уточнить по документации к видеоадаптеру)\n", CudaCoresNumber);
@@ -379,6 +411,7 @@ __global__ void ptmKernel1(double* r, double* c0, double* c2, double* c4, double
                 long m6 = m0 - GridXY;
 
                 r[m0] = (omega * (c2[m0] * r[m2] + c4[m0] * r[m4] + c6[m0] * r[m6]) + r[m0]) / ((0.5 * omega + 1) * c0[m0]);                
+                               
                 //printf("243: r[%d] = %lf\n", m0, r[m0]);
             }
         }        
