@@ -183,14 +183,13 @@ __global__ void initVectorInGpuKernel(int* c, unsigned int size)
 /// </summary>
 /// <param name="c"></param>
 /// <param name="size">Кол-во элементов вектора s</param>
-/// <param name="s">i+j+k</param>
 /// <returns></returns>
 __global__ void ptmKernel1(double* r, double* c0, double* c2, double* c4, double* c6, unsigned int size, double omega)
 {
     // Compute the offset in each dimension
     const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
     
-    // Compute the linear index assuming that X,Y then Z memory ordering
+    // Индекс строки, которую обрабатывает текущий поток 
     const size_t idx = threadX + 1;
 
     size_t currentY = 1; // 0 - граница, берём 1
@@ -217,6 +216,71 @@ __global__ void ptmKernel1(double* r, double* c0, double* c2, double* c4, double
         
 }
 
+
+/// <summary>
+/// ПТМ, проход от 0 до Nx+Ny+Nz
+/// </summary>
+/// <param name="c"></param>
+/// <param name="size">Кол-во элементов вектора s</param>
+/// <returns></returns>
+__global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double* c6, unsigned int size, double omega)
+{
+    __shared__ double cache[BlockSizeX];
+    
+    // Compute the offset in each dimension
+    const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
+    
+    // Индекс строки, которую обрабатывает текущий поток 
+    const size_t idx = threadX + 1;
+
+    size_t currentY = 1; // 0 - граница, берём 1
+
+    for (size_t s = 2; s <= GridNx + GridNy - 2; s++)
+    {
+        __syncthreads();
+        if (idx + currentY == s && s < GridNy + idx)
+        {
+            size_t nodeIndex = idx + (BlockSizeX + 1) * currentY + GridXY;
+
+            size_t m0 = nodeIndex;
+
+            if (c0[m0] > 0)
+            {
+                size_t m2 = m0 - 1;
+                size_t m4 = m0 - GridNx;
+                size_t m6 = m0 - GridXY;
+
+                double rm4 = 0;
+                if (s > 2 + threadX)
+                {
+                    rm4 = cache[threadX];
+                }
+                else
+                {
+                    rm4 = r[m4];
+                }
+
+                double rm2 = 0;
+                if (threadX != 0 && s > 3 + threadX)
+                {
+                    rm2 = cache[threadX-1];
+                }
+                else
+                {
+                    rm2 = r[m2];
+                }
+
+
+                double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * r[m6]) + r[m0]) / ((0.5 * omega + 1) * c0[m0]);
+                cache[threadX] = rm0;
+                r[m0] = rm0;
+            }
+            
+            currentY++;
+        }
+    }
+
+}
 
 #pragma endregion Kernels
 
@@ -379,7 +443,8 @@ void PtmTest()
     printf("--- ptmKernel1 Starting... ---\n");
 
     cudaEventRecord(start, 0);
-    ptmKernel1 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    //ptmKernel1 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    ptmKernel2 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     cudaDeviceSynchronize();
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
@@ -411,6 +476,7 @@ void PtmTest()
                 size_t m2 = m0 - 1;
                 size_t m4 = m0 - GridNx;
                 size_t m6 = m0 - GridXY;
+                //host_r_cpu[m0] = host_r_cpu[m2];
                 host_r_cpu[m0] = (omega * (host_c2[m0] * host_r_cpu[m2] + host_c4[m0] * host_r_cpu[m4] + host_c6[m0] * host_r_cpu[m6]) + host_r_cpu[m0]) / ((0.5 * omega + 1) * host_c0[m0]);
             }
         }
