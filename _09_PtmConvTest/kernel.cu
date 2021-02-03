@@ -12,7 +12,7 @@
 // 49152 байт - размер shared-памяти для GT 710
 #define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 #define BlockSizeX ThreadsNumber // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeY /*10*/ 10000 /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Y от 1 до CudaCoresNumber
+#define BlockSizeY /*10*/ 25000 /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Y от 1 до CudaCoresNumber
 
 #define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
 #define GridNy BlockSizeY // Размерность расчетной сетки по оси y
@@ -244,7 +244,8 @@ __global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double
 
             size_t m0 = nodeIndex;
 
-            if (c0[m0] > 0)
+            double c0m0 = c0[m0];
+            if (c0m0 > 0)
             {
                 size_t m2 = m0 - 1;
                 size_t m4 = m0 - GridNx;
@@ -271,7 +272,7 @@ __global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double
                 }
 
 
-                double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * r[m6]) + r[m0]) / ((0.5 * omega + 1) * c0[m0]);
+                double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * r[m6]) + r[m0]) / ((0.5 * omega + 1) * c0m0);
                 cache[threadX] = rm0;
                 r[m0] = rm0;
             }
