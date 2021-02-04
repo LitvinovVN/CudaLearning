@@ -8,15 +8,15 @@
 #include <stdlib.h>
 
 #define CudaCoresNumber 192 // Количество ядер cuda (https://geforce-gtx.com/710.html - для GT710, для другой видеокарты необходимо уточнить)
-#define ThreadsNumber /*9*/ 384 // от 1 до CudaCoresNumber
+#define ThreadsNumber 100 /*384*/ // от 1 до CudaCoresNumber
 // 49152 байт - размер shared-памяти для GT 710
 #define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 #define BlockSizeX ThreadsNumber // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeY /*10*/ 25000 /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Y от 1 до CudaCoresNumber
+#define BlockSizeY 4  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Y от 1 до CudaCoresNumber
 
 #define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
-#define GridNy BlockSizeY // Размерность расчетной сетки по оси y
-#define GridNz 2 // Размерность расчетной сетки по оси z
+#define GridNy 50000 // Размерность расчетной сетки по оси y
+#define GridNz BlockSizeY // Размерность расчетной сетки по оси z
 #define GridN GridNx*GridNy*GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
 
@@ -283,6 +283,89 @@ __global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double
 
 }
 
+
+
+/// <summary>
+/// ПТМ, проход от 0 до Nx+Ny+Nz
+/// </summary>
+/// <param name="c"></param>
+/// <param name="size">Кол-во элементов вектора s</param>
+/// <returns></returns>
+__global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double* c6, unsigned int size, double omega)
+{
+    __shared__ double cache[BlockSizeX][GridNz - 1];
+
+    // Compute the offset in each dimension
+    const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
+    const size_t threadY = blockDim.y * blockIdx.y + threadIdx.y;
+
+    // Индекс строки, которую обрабатывает текущий поток 
+    const size_t idx_x = threadX + 1;
+    // Индекс слоя, который обрабатывает текущий поток 
+    const size_t idx_k = threadY + 1;
+
+    size_t currentY = 1; // 0 - граница, берём 1
+
+    for (size_t s = 2; s <= GridNx + GridNy + GridNz - 3; s++)
+    {
+        __syncthreads();
+        if (idx_x + currentY + idx_k == s && s < GridNy + idx_x + idx_k)
+        {
+            size_t nodeIndex = idx_x + (BlockSizeX + 1) * currentY + GridXY * idx_k;
+
+            size_t m0 = nodeIndex;
+
+            double c0m0 = c0[m0];
+            if (c0m0 > 0)
+            {
+                size_t m2 = m0 - 1;
+                size_t m4 = m0 - GridNx;
+                size_t m6 = m0 - GridXY;
+
+                double rm4 = 0;
+                if (s > 3 + threadX + threadY)
+                {                    
+                    rm4 = cache[threadX][threadY];
+                }
+                else
+                {
+                    rm4 = r[m4];
+                }
+                
+                double rm2 = 0;
+                if (threadX != 0 && s > 3 + threadX + threadY)
+                {
+                    rm2 = cache[threadX - 1][threadY];
+                }
+                else
+                {
+                    rm2 = r[m2];
+                }
+
+                double rm6 = 0;
+                if (threadY != 0 && s > 3 + threadX + threadY)
+                {
+                    rm6 = cache[threadX][threadY - 1];
+                }
+                else
+                {
+                    rm6 = r[m6];
+                }
+
+                //double rm0 = m0;
+                double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * rm6) + r[m0]) / ((0.5 * omega + 1) * c0m0);
+
+                //double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * r[m6]) + r[m0]) / ((0.5 * omega + 1) * c0m0);
+                cache[threadX][threadY] = rm0;
+                r[m0] = rm0;
+            }
+
+            currentY++;
+        }
+    }
+
+}
+
 #pragma endregion Kernels
 
 
@@ -310,6 +393,7 @@ int main()
 
 void PtmTest()
 {
+    #pragma region CudaInit
     printf("------------------Тест конвейерного вычисления----------------\n");
     // 1. Вычисляем размер массива данных
     size_t size = GridN; // Кол-во элементов
@@ -422,6 +506,7 @@ void PtmTest()
     cudaMemcpy(dev_crr, host_crr, sizeInBytesDouble, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_s, host_s, sizeInBytesInt, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
+    #pragma endregion CudaInit
 
     // 5. Настраиваем параметры блоков CUDA        
     int host_isGreater = 0;
@@ -445,7 +530,8 @@ void PtmTest()
 
     cudaEventRecord(start, 0);
     //ptmKernel1 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
-    ptmKernel2 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    //ptmKernel2 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    ptmKernel3 << < 1, dim3(BlockSizeX, GridNz - 1) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     cudaDeviceSynchronize();
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
@@ -477,7 +563,7 @@ void PtmTest()
                 size_t m2 = m0 - 1;
                 size_t m4 = m0 - GridNx;
                 size_t m6 = m0 - GridXY;
-                //host_r_cpu[m0] = host_r_cpu[m2];
+                //host_r_cpu[m0] = m0;
                 host_r_cpu[m0] = (omega * (host_c2[m0] * host_r_cpu[m2] + host_c4[m0] * host_r_cpu[m4] + host_c6[m0] * host_r_cpu[m6]) + host_r_cpu[m0]) / ((0.5 * omega + 1) * host_c0[m0]);
             }
         }
@@ -515,6 +601,7 @@ void PtmTest()
     //printf("\n\nCPU\n");
     //Print3dArrayDouble(host_r_cpu);
 
+    #pragma region CudaFree
     // Удаляем буферы памяти
     free(host_c0);
     free(host_c1);
@@ -548,7 +635,7 @@ void PtmTest()
 
     // Сбрасываем устройство CUDA
     cudaDeviceReset();
-
+    #pragma endregion CudaFree
     printf("--------------Тест конвейерного вычисления (конец)------------\n");
 }
 
