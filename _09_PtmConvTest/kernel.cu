@@ -12,10 +12,10 @@
 // 49152 байт - размер shared-памяти для GT 710
 #define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 #define BlockSizeX ThreadsNumber // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeY 4  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Y от 1 до CudaCoresNumber
+#define BlockSizeY 5  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Y от 1 до CudaCoresNumber
 
 #define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
-#define GridNy 50000 // Размерность расчетной сетки по оси y
+#define GridNy 40000 // Размерность расчетной сетки по оси y
 #define GridNz BlockSizeY // Размерность расчетной сетки по оси z
 #define GridN GridNx*GridNy*GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
@@ -27,6 +27,18 @@ void Print3dArrayDouble(double* host_c);
 
 void PtmTest();
 
+#pragma region Результаты запусков
+// CPU: Core i3-10110U 2.1 GHz
+// GPU: GeForce MX250 4Gb (выделенная память 2Gb)
+// 100x4x65000 CPU 165ms   GPU 139.3ms
+// 100x4x60000 CPU 149ms   GPU 128.5ms
+// 100x4x53000 CPU 133ms   GPU 113.4ms
+// 100x4x52000 CPU 129ms   GPU 110.2ms
+// 100x4x51000 CPU 130ms   GPU 109.2ms
+// 100x4x50000 CPU 126ms   GPU 107ms    Shared Memory alloc. per thread block 2560
+// 100x4x10000 CPU 26ms    GPU 21.5ms
+// 100x4x1000  CPU 3ms     GPU 2.5ms
+#pragma endregion
 
 #pragma region Вспомогательные функции
 
@@ -353,6 +365,7 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
                 }
 
                 //double rm0 = m0;
+                //double rm0 = (omega * (2 * rm2 + 2 * rm4 + 2 * rm6) + r[m0]) / ((0.5 * omega + 1) * c0m0);
                 double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * rm6) + r[m0]) / ((0.5 * omega + 1) * c0m0);
 
                 //double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * r[m6]) + r[m0]) / ((0.5 * omega + 1) * c0m0);
@@ -470,25 +483,25 @@ void PtmTest()
     cudaMalloc((void**)&dev_c6, sizeInBytesDouble);
 
     double* dev_u = NULL;
-    cudaMalloc((void**)&dev_u, sizeInBytesDouble);
+    //cudaMalloc((void**)&dev_u, sizeInBytesDouble);
 
     double* dev_f = NULL;
-    cudaMalloc((void**)&dev_f, sizeInBytesDouble);
+    //cudaMalloc((void**)&dev_f, sizeInBytesDouble);
 
     double* dev_r = NULL;
     cudaMalloc((void**)&dev_r, sizeInBytesDouble);
 
     double* dev_Awr = NULL;
-    cudaMalloc((void**)&dev_Awr, sizeInBytesDouble);
+    //cudaMalloc((void**)&dev_Awr, sizeInBytesDouble);
 
     double* dev_Rr = NULL;
-    cudaMalloc((void**)&dev_Rr, sizeInBytesDouble);
+    //cudaMalloc((void**)&dev_Rr, sizeInBytesDouble);
 
     double* dev_crr = NULL;
-    cudaMalloc((void**)&dev_crr, sizeInBytesDouble);
+    //cudaMalloc((void**)&dev_crr, sizeInBytesDouble);
 
     int* dev_s = NULL;
-    cudaMalloc((void**)&dev_s, sizeInBytesInt);
+    //cudaMalloc((void**)&dev_s, sizeInBytesInt);
 
     // 4. Копируем массивы из ОЗУ в GPU
     cudaMemcpy(dev_c0, host_c0, sizeInBytesDouble, cudaMemcpyHostToDevice);
@@ -498,13 +511,13 @@ void PtmTest()
     cudaMemcpy(dev_c4, host_c4, sizeInBytesDouble, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_c5, host_c5, sizeInBytesDouble, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_c6, host_c6, sizeInBytesDouble, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_u, host_u, sizeInBytesDouble, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_f, host_f, sizeInBytesDouble, cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_u, host_u, sizeInBytesDouble, cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_f, host_f, sizeInBytesDouble, cudaMemcpyHostToDevice);
     cudaMemcpy(dev_r, host_r, sizeInBytesDouble, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_Awr, host_Awr, sizeInBytesDouble, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_Rr, host_Rr, sizeInBytesDouble, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_crr, host_crr, sizeInBytesDouble, cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_s, host_s, sizeInBytesInt, cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_Awr, host_Awr, sizeInBytesDouble, cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_Rr, host_Rr, sizeInBytesDouble, cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_crr, host_crr, sizeInBytesDouble, cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_s, host_s, sizeInBytesInt, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     #pragma endregion CudaInit
 
@@ -583,7 +596,7 @@ void PtmTest()
                 if (abs(host_r_cpu[m0] - host_r[m0]) > 0.000001)
                 {
                     isEquals = false;
-                    printf("host_r_cpu[%d] = %lf | host_r[m0]=%lf\n", m0, host_r_cpu[m0], host_r[m0]);
+                    //printf("host_r_cpu[%d] = %lf | host_r[m0]=%lf\n", m0, host_r_cpu[m0], host_r[m0]);
                 }
             }
         }
