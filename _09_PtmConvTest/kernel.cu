@@ -29,7 +29,7 @@ void PtmTest();
 
 #pragma region Результаты запусков
 // CPU: Core i3-10110U 2.1 GHz
-// GPU: GeForce MX250 4Gb (выделенная память 2Gb)
+// GPU: GeForce MX250 4Gb (выделенная память 2Gb) https://gtx-force.ru/geforce-mx250/
 // 100x4x65000 CPU 165ms   GPU 139.3ms
 // 100x4x60000 CPU 149ms   GPU 128.5ms
 // 100x4x53000 CPU 133ms   GPU 113.4ms
