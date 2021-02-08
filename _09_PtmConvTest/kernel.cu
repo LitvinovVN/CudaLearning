@@ -7,16 +7,18 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-#define CudaCoresNumber 192 // Количество ядер cuda (https://geforce-gtx.com/710.html - для GT710, для другой видеокарты необходимо уточнить)
-#define ThreadsNumber 100 /*384*/ // от 1 до CudaCoresNumber
+//#define CudaCoresNumber 192 // Количество ядер cuda (https://geforce-gtx.com/710.html - для GT710, для другой видеокарты необходимо уточнить)
+//#define ThreadsNumber 10 /*384*/ // от 1 до CudaCoresNumber
 // 49152 байт - размер shared-памяти для GT 710
 #define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
-#define BlockSizeX ThreadsNumber // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeY 5  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Y от 1 до CudaCoresNumber
+
+// Распределение потоков в плоскости XOZ
+#define BlockSizeX 100 // Размерность блока по X задаём равной числу нитей в блоке
+#define BlockSizeZ 3  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
 
 #define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
-#define GridNy 40000 // Размерность расчетной сетки по оси y
-#define GridNz BlockSizeY // Размерность расчетной сетки по оси z
+#define GridNy 10000 // Размерность расчетной сетки по оси y
+#define GridNz (BlockSizeZ + 1) // Размерность расчетной сетки по оси z
 #define GridN GridNx*GridNy*GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
 
@@ -38,6 +40,17 @@ void PtmTest();
 // 100x4x50000 CPU 126ms   GPU 107ms    Shared Memory alloc. per thread block 2560
 // 100x4x10000 CPU 26ms    GPU 21.5ms
 // 100x4x1000  CPU 3ms     GPU 2.5ms
+
+//////////////////////////////////////////////////////////
+// CPU: Intel(R) Core(TM) i5-7400 CPU @ 3.00GHz
+// GPU: GeForce GT 710
+// 101x4x50000 CPU 197ms   GPU 1935ms
+// 101x3x50000 CPU 132ms   GPU 880ms
+// 101x2x50000 CPU 66ms    GPU 813ms
+// 51 x4x50000 CPU 94ms    GPU 1921ms
+// 101x4x50000 CPU 211ms   GPU 1932ms
+// 101x4x25000 CPU 102ms   GPU 463ms
+// 101x4x10000 CPU 45ms    GPU 216ms
 #pragma endregion
 
 #pragma region Вспомогательные функции
@@ -305,25 +318,25 @@ __global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double
 /// <returns></returns>
 __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double* c6, unsigned int size, double omega)
 {
-    __shared__ double cache[BlockSizeX][GridNz - 1];
+    __shared__ double cache[BlockSizeX][BlockSizeZ];
 
     // Compute the offset in each dimension
     const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
-    const size_t threadY = blockDim.y * blockIdx.y + threadIdx.y;
+    const size_t threadZ = blockDim.z * blockIdx.z + threadIdx.z;
 
     // Индекс строки, которую обрабатывает текущий поток 
     const size_t idx_x = threadX + 1;
     // Индекс слоя, который обрабатывает текущий поток 
-    const size_t idx_k = threadY + 1;
+    const size_t idx_z = threadZ + 1;
 
     size_t currentY = 1; // 0 - граница, берём 1
 
     for (size_t s = 2; s <= GridNx + GridNy + GridNz - 3; s++)
     {
         __syncthreads();
-        if (idx_x + currentY + idx_k == s && s < GridNy + idx_x + idx_k)
+        if (idx_x + currentY + idx_z == s && s < GridNy + idx_x + idx_z)
         {
-            size_t nodeIndex = idx_x + (BlockSizeX + 1) * currentY + GridXY * idx_k;
+            size_t nodeIndex = idx_x + (BlockSizeX + 1) * currentY + GridXY * idx_z;
 
             size_t m0 = nodeIndex;
 
@@ -335,9 +348,9 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
                 size_t m6 = m0 - GridXY;
 
                 double rm4 = 0;
-                if (s > 3 + threadX + threadY)
+                if (s > 3 + threadX + threadZ)
                 {                    
-                    rm4 = cache[threadX][threadY];
+                    rm4 = cache[threadX][threadZ];
                 }
                 else
                 {
@@ -345,9 +358,9 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
                 }
                 
                 double rm2 = 0;
-                if (threadX != 0 && s > 3 + threadX + threadY)
+                if (threadX != 0 && s > 3 + threadX + threadZ)
                 {
-                    rm2 = cache[threadX - 1][threadY];
+                    rm2 = cache[threadX - 1][threadZ];
                 }
                 else
                 {
@@ -355,9 +368,9 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
                 }
 
                 double rm6 = 0;
-                if (threadY != 0 && s > 3 + threadX + threadY)
+                if (threadZ != 0 && s > 3 + threadX + threadZ)
                 {
-                    rm6 = cache[threadX][threadY - 1];
+                    rm6 = cache[threadX][threadZ - 1];
                 }
                 else
                 {
@@ -369,7 +382,7 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
                 double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * rm6) + r[m0]) / ((0.5 * omega + 1) * c0m0);
 
                 //double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * r[m6]) + r[m0]) / ((0.5 * omega + 1) * c0m0);
-                cache[threadX][threadY] = rm0;
+                cache[threadX][threadZ] = rm0;
                 r[m0] = rm0;
             }
 
@@ -544,7 +557,7 @@ void PtmTest()
     cudaEventRecord(start, 0);
     //ptmKernel1 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     //ptmKernel2 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
-    ptmKernel3 << < 1, dim3(BlockSizeX, GridNz - 1) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    ptmKernel3 << < 1, dim3(BlockSizeX, 1, BlockSizeZ) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     cudaDeviceSynchronize();
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
