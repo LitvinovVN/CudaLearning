@@ -13,11 +13,11 @@
 #define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 
 // Распределение потоков в плоскости XOZ
-#define BlockSizeX 100 // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeZ 3  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
+#define BlockSizeX 16 // Размерность блока по X задаём равной числу нитей в блоке
+#define BlockSizeZ 64  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
 
 #define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
-#define GridNy 10000 // Размерность расчетной сетки по оси y
+#define GridNy 1000 // Размерность расчетной сетки по оси y
 #define GridNz (BlockSizeZ + 1) // Размерность расчетной сетки по оси z
 #define GridN GridNx*GridNy*GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
@@ -331,7 +331,7 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
 
     size_t currentY = 1; // 0 - граница, берём 1
 
-    for (size_t s = 2; s <= GridNx + GridNy + GridNz - 3; s++)
+    for (size_t s = 3; s <= GridNx + GridNy + GridNz - 3; s++)
     {
         __syncthreads();
         if (idx_x + currentY + idx_z == s && s < GridNy + idx_x + idx_z)
