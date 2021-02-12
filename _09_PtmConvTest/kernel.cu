@@ -13,8 +13,8 @@
 #define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 
 // Распределение потоков в плоскости XOZ
-#define BlockSizeX 512 // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeZ 2  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
+#define BlockSizeX 16 // Размерность блока по X задаём равной числу нитей в блоке
+#define BlockSizeZ 64  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
 
 #define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
 #define GridNy 10000 // Размерность расчетной сетки по оси y
@@ -558,6 +558,17 @@ void PtmTest()
     //ptmKernel1 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     //ptmKernel2 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     ptmKernel3 << < 1, dim3(BlockSizeX, 1, BlockSizeZ) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+
+    cudaError_t cudaResult;
+    cudaResult = cudaGetLastError();
+    if (cudaResult != cudaSuccess)
+    {
+        printf("\n---------- CUDA ERROR!!!-----------\n");
+        printf(cudaGetErrorString(cudaResult));
+        printf("\n-----------------------------------\n");
+        return;
+    }
+
     cudaDeviceSynchronize();
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
