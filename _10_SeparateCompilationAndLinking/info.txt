@@ -1,0 +1,7 @@
+https://developer.nvidia.com/blog/separate-compilation-linking-cuda-device-code/
+
+nvcc -x cu -arch=sm_35 -I. -dc v3.cpp -o v3.o
+nvcc -x cu -arch=sm_35 -I. -dc particle.cpp -o particle.o
+nvcc -x cu -arch=sm_35 -I. -dc main.cpp -o main.o
+
+nvcc -arch=sm_35 v3.o particle.o main.o -o app

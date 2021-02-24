@@ -13,11 +13,11 @@
 #define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 
 // Распределение потоков в плоскости XOZ
-#define BlockSizeX 16 // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeZ 64  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
+#define BlockSizeX 1 // Размерность блока по X задаём равной числу нитей в блоке
+#define BlockSizeZ 640  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
 
 #define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
-#define GridNy 10000 // Размерность расчетной сетки по оси y
+#define GridNy 40000 // Размерность расчетной сетки по оси y
 #define GridNz (BlockSizeZ + 1) // Размерность расчетной сетки по оси z
 #define GridN GridNx*GridNy*GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
@@ -322,7 +322,7 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
 
     // Compute the offset in each dimension
     const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
-    const size_t threadZ = blockDim.z * blockIdx.z + threadIdx.z;
+    const size_t threadZ = blockDim.y * blockIdx.y + threadIdx.y;
 
     // Индекс строки, которую обрабатывает текущий поток 
     const size_t idx_x = threadX + 1;
@@ -557,7 +557,8 @@ void PtmTest()
     cudaEventRecord(start, 0);
     //ptmKernel1 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     //ptmKernel2 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
-    ptmKernel3 << < 1, dim3(BlockSizeX, 1, BlockSizeZ) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    //ptmKernel3 << < 1, dim3(BlockSizeX, 1, BlockSizeZ) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    ptmKernel3 << < 1, dim3(BlockSizeX, BlockSizeZ, 1) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
 
     cudaError_t cudaResult;
     cudaResult = cudaGetLastError();
