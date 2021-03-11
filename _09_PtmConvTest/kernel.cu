@@ -10,16 +10,19 @@
 //#define CudaCoresNumber 192 // Количество ядер cuda (https://geforce-gtx.com/710.html - для GT710, для другой видеокарты необходимо уточнить)
 //#define ThreadsNumber 10 /*384*/ // от 1 до CudaCoresNumber
 // 49152 байт - размер shared-памяти для GT 710
-#define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
+//#define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 
 // Распределение потоков в плоскости XOZ
-#define BlockSizeX 6 // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockSizeZ 106  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
+#define BlockDimX 64 // Размерность блока по X задаём равной числу нитей в блоке
+#define BlockDimY 10  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
 
-#define GridNx (BlockSizeX + 1) // Размерность расчетной сетки по оси x
-#define GridNy 1000 // Размерность расчетной сетки по оси y
-#define GridNz (BlockSizeZ + 1) // Размерность расчетной сетки по оси z
-#define GridN GridNx*GridNy*GridNz // Суммарное число узлов расчетной сетки
+#define GridDimX 1 // Размерность сетки куда по X
+#define GridDimY 1 // Размерность сетки куда по Y
+
+#define GridNx (BlockDimX * GridDimX + 1) // Размерность расчетной сетки по оси x
+#define GridNy 10000 // Размерность расчетной сетки по оси y
+#define GridNz (BlockDimY * GridDimY + 1) // Размерность расчетной сетки по оси z
+#define GridN GridNx * GridNy * GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
 
 #define EPS 0.001
@@ -223,7 +226,7 @@ __global__ void ptmKernel1(double* r, double* c0, double* c2, double* c4, double
         __syncthreads();
         if (idx + currentY == s && s < GridNy + idx)
         {            
-            size_t nodeIndex = idx + (BlockSizeX+1) * currentY + GridXY;
+            size_t nodeIndex = idx + (BlockDimX+1) * currentY + GridXY;
                         
             size_t m0 = nodeIndex;
 
@@ -250,7 +253,7 @@ __global__ void ptmKernel1(double* r, double* c0, double* c2, double* c4, double
 /// <returns></returns>
 __global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double* c6, unsigned int size, double omega)
 {
-    __shared__ double cache[BlockSizeX];
+    __shared__ double cache[BlockDimX];
     
     // Compute the offset in each dimension
     const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
@@ -265,7 +268,7 @@ __global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double
         __syncthreads();
         if (idx + currentY == s && s < GridNy + idx)
         {
-            size_t nodeIndex = idx + (BlockSizeX + 1) * currentY + GridXY;
+            size_t nodeIndex = idx + (BlockDimX + 1) * currentY + GridXY;
 
             size_t m0 = nodeIndex;
 
@@ -315,7 +318,7 @@ __global__ void ptmKernel2(double* r, double* c0, double* c2, double* c4, double
 /// </summary>
 __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double* c6, unsigned int size, double omega)
 {
-    __shared__ double cache[BlockSizeX][BlockSizeZ];
+    __shared__ double cache[BlockDimX][BlockDimY];
 
     // Compute the offset in each dimension
     const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
@@ -333,7 +336,7 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
         __syncthreads();
         if (idx_x + currentY + idx_z == s && s < GridNy + idx_x + idx_z)
         {
-            size_t nodeIndex = idx_x + (BlockSizeX + 1) * currentY + GridXY * idx_z;
+            size_t nodeIndex = idx_x + (BlockDimX + 1) * currentY + GridXY * idx_z;
 
             size_t m0 = nodeIndex;
 
@@ -394,7 +397,7 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
 /// </summary>
 __global__ void ptmKernel4(double* r, double* c0, double* c2, double* c4, double* c6, double omega)
 {
-    __shared__ double cache[BlockSizeX][BlockSizeZ];
+    //__shared__ double cache[BlockDimX][BlockDimY];
 
     // Compute the offset in each dimension
     const size_t threadX = blockDim.x * blockIdx.x + threadIdx.x;
@@ -407,12 +410,19 @@ __global__ void ptmKernel4(double* r, double* c0, double* c2, double* c4, double
 
     size_t currentY = 1; // 0 - граница, берём 1
 
+    //int Nsb = GridDimX + GridDimY - 2;// Индекс последнего диагонального среза блоков
+    //int Ns = (BlockDimX + 1) + GridNy + (BlockDimY + 1);
+    //int currentNsb = blockIdx.x + blockIdx.y;
+    
     for (size_t s = 3; s <= GridNx + GridNy + GridNz - 3; s++)
     {
         __syncthreads();
+        __threadfence();
+        __threadfence_block();
         if (idx_x + currentY + idx_z == s && s < GridNy + idx_x + idx_z)
         {
-            size_t nodeIndex = idx_x + (BlockSizeX + 1) * currentY + GridXY * idx_z;
+            //size_t nodeIndex = idx_x + (BlockDimX + 1) * currentY + GridXY * idx_z;
+            size_t nodeIndex = GridXY * idx_z + GridNx * currentY + idx_x;
 
             size_t m0 = nodeIndex;
 
@@ -424,44 +434,48 @@ __global__ void ptmKernel4(double* r, double* c0, double* c2, double* c4, double
                 size_t m6 = m0 - GridXY;
 
                 double rm4 = 0;
-                if (s > 3 + threadX + threadZ)
+                rm4 = r[m4];
+                /*if (s > 3 + threadX + threadZ)
                 {
                     rm4 = cache[threadX][threadZ];
                 }
                 else
                 {
                     rm4 = r[m4];
-                }
+                }*/
 
                 double rm2 = 0;
-                if (threadX != 0 && s > 3 + threadX + threadZ)
+                rm2 = r[m2];
+                /*if (threadX != 0 && s > 3 + threadX + threadZ)
                 {
                     rm2 = cache[threadX - 1][threadZ];
                 }
                 else
                 {
                     rm2 = r[m2];
-                }
+                }*/
 
                 double rm6 = 0;
-                if (threadZ != 0 && s > 3 + threadX + threadZ)
+                rm6 = r[m6];
+                /*if (threadZ != 0 && s > 3 + threadX + threadZ)
                 {
                     rm6 = cache[threadX][threadZ - 1];
                 }
                 else
                 {
                     rm6 = r[m6];
-                }
-                                
-                double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * rm6) + r[m0]) / ((0.5 * omega + 1) * c0m0);                                
-                cache[threadX][threadZ] = rm0;
-                r[m0] = rm0;
+                }*/
+                
+                //double rm0 = m2 + m4 + m6;
+                //double rm0 = r[m0] * 2;
+                double rm0 = (omega * (c2[m0] * rm2 + c4[m0] * rm4 + c6[m0] * rm6) + r[m0]) / ((0.5 * omega + 1) * c0m0);
+                //cache[threadX][threadZ] = rm0;
+                r[m0] = rm0;                
             }
 
             currentY++;
         }
     }
-
 }
 
 #pragma endregion Kernels
@@ -630,8 +644,8 @@ void PtmTest()
     //ptmKernel1 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     //ptmKernel2 << < 1, BlockSizeX >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
     //ptmKernel3 << < 1, dim3(BlockSizeX, 1, BlockSizeZ) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
-    //ptmKernel3 << < 1, dim3(BlockSizeX, BlockSizeZ, 1) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
-    ptmKernel4 << < dim3(1, 1, 1), dim3(BlockSizeX, BlockSizeZ, 1) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, omega);
+    ptmKernel3 << < 1, dim3(BlockDimX, BlockDimY, 1) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, GridN, omega);
+    //ptmKernel4 << < dim3(GridDimX, GridDimY, 1), dim3(BlockDimX, BlockDimY, 1) >> > (dev_r, dev_c0, dev_c2, dev_c4, dev_c6, omega);
 
     cudaError_t cudaResult;
     cudaResult = cudaGetLastError();
@@ -674,7 +688,8 @@ void PtmTest()
                 size_t m2 = m0 - 1;
                 size_t m4 = m0 - GridNx;
                 size_t m6 = m0 - GridXY;
-                //host_r_cpu[m0] = m0;
+                //host_r_cpu[m0] = m2+m4+m6;
+                //host_r_cpu[m0] = host_r_cpu[m0] * 2;
                 host_r_cpu[m0] = (omega * (host_c2[m0] * host_r_cpu[m2] + host_c4[m0] * host_r_cpu[m4] + host_c6[m0] * host_r_cpu[m6]) + host_r_cpu[m0]) / ((0.5 * omega + 1) * host_c0[m0]);
             }
         }
@@ -691,10 +706,10 @@ void PtmTest()
             for (size_t i = 1; i < GridNx; i++)
             {
                 size_t m0 = i + j * GridNx + k * GridXY;
-                if (abs(host_r_cpu[m0] - host_r[m0]) > 0.000001)
+                if (abs(host_r_cpu[m0] - host_r[m0]) > 0.001)
                 {
                     isEquals = false;
-                    //printf("host_r_cpu[%d] = %lf | host_r[m0]=%lf\n", m0, host_r_cpu[m0], host_r[m0]);
+                    printf("host_r_cpu[%d] = %lf | host_r[m0]=%lf\n", m0, host_r_cpu[m0], host_r[m0]);
                 }
             }
         }
