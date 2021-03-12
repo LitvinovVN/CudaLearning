@@ -80,6 +80,8 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="addWithCuda.cu" />
+    <CudaCompile Include="grid3d.cu" />
     <CudaCompile Include="grid3dCreate.cu" />
     <CudaCompile Include="helpers.cu" />
     <CudaCompile Include="kernel.cu" />

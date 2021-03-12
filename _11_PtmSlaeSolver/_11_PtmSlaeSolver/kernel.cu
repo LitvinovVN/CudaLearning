@@ -1,6 +1,6 @@
 ﻿#include "grid3dCreate.cu"
 #include "threadsTest1.cu"
-
+#include "addWithCuda.cu"
 
 int main()
 {
