@@ -1,0 +1,101 @@
+\documentclass{article}
+ 
+\usepackage[T2A]{fontenc} % Поддержка русских букв
+\usepackage[utf8]{inputenc} % Кодировка utf8
+\usepackage[english, russian]{babel} % Языки: русский, английский
+\usepackage[left = 2.5 cm, top = 2 cm, right = 1 cm, bottom = 20 mm, nohead, nofoot]{geometry} 
+ 
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+ 
+\begin{document}
+ 
+ 
+\begin{algorithm}
+\caption{mptm(IN: $c_1, c_2, c_3, c_4, c_5, c_6, c_0, f, s, omega, e;$ OUT: $u$)}\label{alg:mptm}
+\begin{algorithmic}[1]
+ 
+\State $i \gets 0;\; j \gets 0;\; k \gets 0;\; it \gets 0$
+\State $tau \gets 2 \cdot omega$
+
+\For{$m_0 \in [0; n-1]$}
+\State $r[m_0] \gets 0$
+\EndFor
+
+\Repeat
+\State $Aww \gets 0;\; RwRw \gets 0;\; ww \gets 0;\; max \gets 0$
+
+\For{$k \in [1; n_3-1]$}
+\For{$i \in [1; n_1-1]$}
+\For{$j \in [1; n_2-1]$}
+\State $m_0 \gets k + n_3 \cdot j + n_2 \cdot n_3 \cdot i$
+\If {$c_0[m_0] > 0$}
+\State $m_1 \gets m_0 + n_2 \cdot n_3;\; m_2 \gets m_0 - n_2 \cdot n_3;\; m_3 \gets m_0 + n_3$
+\State $m_4 \gets m_0 - n_3;\; m_5 \gets m_0 + 1;\; m_6 \gets m_0 - 1$
+\State \parbox[t]{\dimexpr\linewidth-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent}{$r[m_0] \gets f[m_0] - c_0[m_0] \cdot u[m_0] + (c_1[m_0] \cdot u[m_1] + c_2[m_0] \cdot u[m_2] + c_3[m_0] \cdot u[m_3] + c_4[m_0] \cdot u[m_4] + c_5[m_0] \cdot u[m_5] + c_6[m_0] \cdot u[m_6])$}
+\If {$max < |r[m_0]|$}
+\State $max \gets |r[m_0]|$
+\EndIf
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+
+\For{$k \in [1; n_3-1]$}
+\For{$i \in [1; n_1-1]$}
+\For{$j \in [1; n_2-1]$}
+\State $m_0 \gets k + n_3 \cdot j + n_2 \cdot n_3 \cdot i$
+\If {$c_0[m_0] > 0$}
+\State $m_2 \gets m_0 - n_2 \cdot n_3;\; m_4 \gets m_0 - n_3;\; m_6 \gets m_0 - 1$
+\State $r[m_0] \gets (omega \cdot (c_2[m_0] \cdot r[m_2] + c_4[m_0] \cdot r[m_4] + c_6[m_0] \cdot r[m_6]) + r[m_0]) / ((0.5 \cdot omega + 1) \cdot c_0[m_0]) $
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+
+\For{$k \in [n_3-2; 1]$}
+\For{$i \in [n_1-2; 1]$}
+\For{$j \in [n_2-2; 1]$}
+\State $m_0 \gets k + n_3 \cdot j + n_2 \cdot n_3 \cdot i$
+\If {$c_0[m_0] > 0$}
+\State $m_1 \gets m_0 + n_2 \cdot n_3;\; m_3 \gets m_0 + n_3;\; m_5 \gets m_0 + 1$
+\State \parbox[t]{\dimexpr\linewidth-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent}{$r[m_0] \gets (omega \cdot (c_1[m_0] \cdot r[m_1] + c_3[m_0] \cdot r[m_3] + c_5[m_0] \cdot r[m_5]) + r[m_0] \cdot c_0[m_0]) / ((0.5 \cdot omega + 1) \cdot c_0[m_0]) $}
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+
+\For{$k \in [1; n_3-2]$}
+\For{$i \in [1; n_1-2]$}
+\For{$j \in [1; n_2-2]$}
+\State $m_0 \gets k + n_3 \cdot j + n_2 \cdot n_3 \cdot i$
+\If {$c_0[m_0] > 0$}
+\State $m_1 \gets m_0 + n_2 \cdot n_3;\; m_2 \gets m_0 - n_2 \cdot n_3;\; m_3 \gets m_0 + n_3$
+\State $m_4 \gets m_0 - n_3;\; m_5 \gets m_0 + 1;\; m_6 \gets m_0 - 1$
+\State \parbox[t]{\dimexpr\linewidth-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent}{$Awr \gets 1.1 \cdot c_0[m_0] \cdot r[m_0] - (c_1[m_0] \cdot r[m_1] + c_3[m_0] \cdot r[m_3] + c_5[m_0] \cdot r[m_5] + c_2[m_0] \cdot r[m_2] + c_4[m_0] \cdot r[m_4] + c_6[m_0] \cdot r[m_6])$}
+\State $Rr \gets 0.5 \cdot c_0[m_0] \cdot r[m_0] - (c_1[m_0] \cdot r[m_1] + c_3[m_0] \cdot r[m_3] + c_5[m_0] \cdot r[m_5])$
+\State $RwRw \gets RwRw + Rr^2 / c_0[m_0];\; Aww \gets Aww + Awr \cdot r[m_0];\; ww \gets ww + c_0[m_0] \cdot r[m_0]^2$
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+
+\If {$ww > 0$}
+\State $tay \gets 2 \cdot omega + ww / Aww$
+\State $omega \gets sqrt(ww / RwRw)$
+\EndIf
+
+\For{$m_0 \in [0; n]$}
+\State $u[m_0] \gets u[m_0] + 1 \cdot tay \cdot r[m_0]$
+\EndFor
+
+\Until{($max > e) \wedge ($it < 300)}
+
+
+ 
+
+\end{algorithmic}
+\end{algorithm}
+ 
+ 
+\end{document}
