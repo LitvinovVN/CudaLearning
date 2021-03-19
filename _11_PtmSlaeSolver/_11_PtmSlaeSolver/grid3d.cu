@@ -4,28 +4,30 @@
 #include "helpers.cu"
 
 /// <summary>
-/// Размерность в трёхмерном пространстве, size_t
+/// Размерность в трёхмерном пространстве
 /// </summary>
+template<typename T>
 struct Dim3d {
-    size_t x;
-    size_t y;
-    size_t z;
-};
-
-/// <summary>
-/// Размерность в трёхмерном пространстве, float
-/// </summary>
-struct Dim3df {
-    float x;
-    float y;
-    float z;
+    T x;
+    T y;
+    T z;
 };
 
 /// <summary>
 /// Фрагмент трёхмерной сетки
 /// </summary>
 struct GridFragment3d {
-    Dim3d dimensions;
+    /// <summary>
+    /// Индекс первого узла фрагмента сетки,
+    /// т.е. узла с координатами {0, 0, 0}
+    /// в системе координат фрагмента
+    /// </summary>
+    size_t idxStart{};
+
+    /// <summary>
+    /// Размерность фрагмента сетки
+    /// </summary>
+    Dim3d<size_t> dimensions;
 };
 
 /// <summary>
@@ -35,12 +37,12 @@ struct Grid3d {
     /// <summary>
     /// Размерность расчетной сетки (количество узлов по пространственным координатам)
     /// </summary>
-    Dim3d dimensions{ 20, 30, 40 };
+    Dim3d<size_t> dimensions{ 20, 30, 40 };
 
     /// <summary>
     /// Шаги расчетной сетки по пространственным координатам
     /// </summary>
-    Dim3df h{ 1, 1, 1 };
+    Dim3d<float> h{ 1, 1, 1 };
 
     Grid3d(int nx, int ny, int nz, float hx, float hy, float hz) {
         dimensions.x = nx;
