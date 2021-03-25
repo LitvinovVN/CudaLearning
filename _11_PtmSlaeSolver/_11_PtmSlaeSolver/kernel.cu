@@ -2,6 +2,7 @@
 #include "threadsTest1.cu"
 #include "addWithCuda.cu"
 #include "openMPTests.cpp"
+#include "mpiTests.cpp"
 
 int main()
 {
@@ -20,6 +21,7 @@ int main()
         std::cout << "4. Создание объекта 3d сетки" << std::endl;
         std::cout << "5. Тест многопоточности 1" << std::endl;
         std::cout << "6. OpenMP" << std::endl;
+        std::cout << "7. MPI" << std::endl;
         std::cout << "Выберите режим работы: ";
         char selected_mode = 0;
         std::cin >> selected_mode;
@@ -49,6 +51,10 @@ int main()
          case '6':
              // OpenMP
              openMPTests();
+             break;
+         case '7':
+             // MPI
+             mpiTests();
              break;
         default:
             break;
