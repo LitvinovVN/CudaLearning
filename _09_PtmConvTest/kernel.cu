@@ -20,7 +20,7 @@
 #define GridDimY 1 // Размерность сетки куда по Y
 
 #define GridNx (BlockDimX * GridDimX + 1) // Размерность расчетной сетки по оси x
-#define GridNy 1000 // Размерность расчетной сетки по оси y
+#define GridNy 40000 // Размерность расчетной сетки по оси y
 #define GridNz (BlockDimY * GridDimY + 1) // Размерность расчетной сетки по оси z
 #define GridN GridNx * GridNy * GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
