@@ -1,0 +1,70 @@
+\documentclass{article}
+
+\usepackage[T2A]{fontenc} % Поддержка русских букв
+\usepackage[utf8]{inputenc} % Кодировка utf8
+\usepackage[english, russian]{babel} % Языки: русский, английский
+\usepackage[left = 2.5 cm, top = 2 cm, right = 1 cm, bottom = 20 mm, nohead, nofoot]{geometry} 
+
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+\begin{document}
+	
+	\begin{algorithm}
+		\caption{ptmKernel3(IN/OUT: $r;$ IN: $c0, c2, c4, c6, omega$ )}\label{alg:ptmKernel3}
+		\begin{algorithmic}[1]
+	
+		\State $threadX \gets blockDim.x \cdot blockIdx.x + threadIdx.x;$		
+		\State $threadZ \gets blockDim.z \cdot blockIdx.z + threadIdx.z;$		
+				
+		\State $idx \_ x \gets threadX  + 1;$		
+		\State $idx \_ z \gets threadZ  + 1;$		
+		\State $currentY \gets 1;$
+		
+		\For{$s \in [3; GridNx + GridNy + GridNz - 3]$}
+			\If {$(idx \_ x + currentY + idx \_ z =s) \wedge  (s < GridNy + idx \_ x + idx \_ z) $}
+			\State $nodeIndex \gets idx \_ x + (BlockDimX + 1) \cdot currentY + GridXY \cdot idx \_ z;$
+			\State $m0 \gets nodeIndex;$
+			\State $c0m0 \gets c0[m0];$
+			     \If  {$c0m0 > 0$} 
+			     \State $m2 \gets m0 - 1;$
+			     \State $m4 \gets m0 - GridNx;$
+			     \State $m6 \gets m0 - GridXY;$
+			     
+			     \State $rm4 \gets 0;$
+			     \If {$(s > 3 + threadX + threadZ) $}
+			     \State $rm4 \gets cache[threadX][threadZ];$
+			     \Else 			     
+			     \State $rm4 \gets r[m4];$
+			     \EndIf
+			     \State $rm2 \gets 0;$    
+			     \If  {$(threadX \neq 0) \wedge (s > 3 + threadX + threadZ)$} 
+			     \State $rm2 \gets cache[threadX - 1][threadZ];$
+			     \Else
+			     \State $rm2 \gets r[m2];$
+			     \EndIf	
+			     \State $rm6 \gets 0;$
+			     \If  {$(threadZ \neq 0) \wedge (s > 3 + threadX + threadZ)$}
+			     \State $rm6 \gets cache[threadX][threadZ - 1];$
+			     \Else
+			     \State $rm6 \gets r[m6];$
+			     \EndIf
+			     \State $rm0 \gets (omega \cdot (c2[m0] \cdot rm2 + c4[m0] \cdot rm4 + c6[m0] \cdot rm6) + r[m0]) / ((0.5 \cdot omega + 1) \cdot c0m0);$
+			     \State $cache[threadX][threadZ] \gets rm0;$
+			     \State $r[m0] \gets rm0;$			     		   
+			  \EndIf
+			  \State $currentY \gets currentY + 1 ;$   
+		\EndIf	     		     
+		\EndFor
+		
+		
+			
+			
+			
+			
+			
+		\end{algorithmic}
+	\end{algorithm}
+	
+	
+\end{document}

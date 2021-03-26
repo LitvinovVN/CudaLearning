@@ -1,0 +1,48 @@
+\documentclass{article}
+ 
+\usepackage[T2A]{fontenc} % Поддержка русских букв
+\usepackage[utf8]{inputenc} % Кодировка utf8
+\usepackage[english, russian]{babel} % Языки: русский, английский
+\usepackage[left = 2.5 cm, top = 2 cm, right = 1 cm, bottom = 20 mm, nohead, nofoot]{geometry} 
+ 
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+ 
+\begin{document}
+ 
+ 
+\begin{algorithm}
+\caption{mptm(IN: $c_1, c_2, c_3, c_4, c_5, c_6, c_0, f, omega, e;$ OUT: $u$)}\label{alg:mptm}
+\begin{algorithmic}[1]
+ 
+\For{$k \in [1; n_3-2]$}
+\For{$i \in [1; n_1-2]$}
+\For{$j \in [1; n_2-2]$}
+\State $m_0 \gets k + n_3 \cdot j + n_2 \cdot n_3 \cdot i$
+\If {$c_0[m_0] > 0$}
+\State $m_2 \gets m_0 - n_2 \cdot n_3;\; m_4 \gets m_0 - n_3;\; m_6 \gets m_0 - 1$
+\State $r[m_0] \gets (omega \cdot (c_2[m_0] \cdot r[m_2] + c_4[m_0] \cdot r[m_4] + c_6[m_0] \cdot r[m_6]) + r[m_0]) / ((0.5 \cdot omega + 1) \cdot c_0[m_0]) $
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+
+\For{$k \in [n_3-2; 1]$}
+\For{$i \in [n_1-2; 1]$}
+\For{$j \in [n_2-2; 1]$}
+\State $m_0 \gets k + n_3 \cdot j + n_2 \cdot n_3 \cdot i$
+\If {$c_0[m_0] > 0$}
+\State $m_1 \gets m_0 + n_2 \cdot n_3;\; m_3 \gets m_0 + n_3;\; m_5 \gets m_0 + 1$
+\State \parbox[t]{\dimexpr\linewidth-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent-\algorithmicindent}{$r[m_0] \gets (omega \cdot (c_1[m_0] \cdot r[m_1] + c_3[m_0] \cdot r[m_3] + c_5[m_0] \cdot r[m_5]) + r[m_0] \cdot c_0[m_0]) / ((0.5 \cdot omega + 1) \cdot c_0[m_0]) $}
+\EndIf
+\EndFor
+\EndFor
+\EndFor
+
+
+
+\end{algorithmic}
+\end{algorithm}
+ 
+ 
+\end{document}

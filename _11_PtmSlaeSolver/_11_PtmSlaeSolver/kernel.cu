@@ -1,6 +1,7 @@
 ﻿#include "grid3dCreate.cu"
 #include "threadsTest1.cu"
 #include "addWithCuda.cu"
+#include "openMPTests.cpp"
 
 int main()
 {
@@ -18,6 +19,7 @@ int main()
         std::cout << "3. Тест работоспособности GPU. Суммирование массивов из 5 элементов" << std::endl;
         std::cout << "4. Создание объекта 3d сетки" << std::endl;
         std::cout << "5. Тест многопоточности 1" << std::endl;
+        std::cout << "6. OpenMP" << std::endl;
         std::cout << "Выберите режим работы: ";
         char selected_mode = 0;
         std::cin >> selected_mode;
@@ -43,6 +45,10 @@ int main()
          case '5':
              // Тест многопоточности 1
              threadsTest1();
+             break;
+         case '6':
+             // OpenMP
+             openMPTests();
              break;
         default:
             break;
