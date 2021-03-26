@@ -1,0 +1,16 @@
+@startuml
+
+class Grid3d {
+-field1
+#field2
+~method1()
++method2()
+~method3()
++method4()
+}
+
+class Dim3d
+
+foo -> bar
+
+@enduml
