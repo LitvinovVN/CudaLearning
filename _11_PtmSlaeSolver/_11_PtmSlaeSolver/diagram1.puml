@@ -9,8 +9,14 @@ class Grid3d {
 +method4()
 }
 
-class Dim3d
+class GridBlock3d {
 
-foo -> bar
+}
+
+class Dim3d{
+
+}
+
+Grid3d *-- GridBlock3d
 
 @enduml

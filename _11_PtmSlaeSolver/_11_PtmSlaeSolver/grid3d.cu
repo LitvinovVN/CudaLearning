@@ -16,7 +16,7 @@ struct Dim3d {
 /// <summary>
 /// Фрагмент трёхмерной сетки
 /// </summary>
-struct GridFragment3d {
+struct GridBlock3d {
     /// <summary>
     /// Индекс первого узла фрагмента сетки,
     /// т.е. узла с координатами {0, 0, 0}
