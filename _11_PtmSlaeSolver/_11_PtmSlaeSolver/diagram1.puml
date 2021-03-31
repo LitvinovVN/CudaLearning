@@ -1,7 +1,13 @@
 @startuml
 
+class Dim3d<T>{
+    +T x;
+    +T y;
+    +T z;
+}
+
 class Grid3d {
--field1
++Dim3d<size_t> dimensions
 #field2
 ~method1()
 +method2()
@@ -10,13 +16,15 @@ class Grid3d {
 }
 
 class GridBlock3d {
-
+    +size_t idxStart{}        
+    +Dim3d<size_t> dimensions
 }
 
-class Dim3d{
 
-}
 
 Grid3d *-- GridBlock3d
+Grid3d *-- Dim3d
+
+GridBlock3d *-- Dim3d
 
 @enduml
