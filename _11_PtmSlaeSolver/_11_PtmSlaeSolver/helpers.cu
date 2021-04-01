@@ -15,6 +15,7 @@
 #include <thread>
 
 #include "grid3d.cu"
+#include "Dim3d.cpp"
 
 using ::std::thread;
 using ::std::array;

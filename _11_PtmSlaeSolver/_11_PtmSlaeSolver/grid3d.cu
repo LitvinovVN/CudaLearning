@@ -2,16 +2,8 @@
 #define GRID3D_FILE
 
 #include "helpers.cu"
+#include "Dim3d.cpp"
 
-/// <summary>
-/// Размерность в трёхмерном пространстве
-/// </summary>
-template<typename T>
-struct Dim3d {
-    T x;
-    T y;
-    T z;
-};
 
 /// <summary>
 /// Фрагмент трёхмерной сетки
@@ -33,21 +25,20 @@ struct GridBlock3d {
 /// <summary>
 /// Трёхмерная сетка
 /// </summary>
+template<typename Tindx, typename Tdata>
 struct Grid3d {
     /// <summary>
     /// Размерность расчетной сетки (количество узлов по пространственным координатам)
     /// </summary>
-    Dim3d<size_t> dimensions{ 20, 30, 40 };
+    Dim3d<Tindx> dimensions{};
 
     /// <summary>
     /// Шаги расчетной сетки по пространственным координатам
     /// </summary>
     Dim3d<float> h{ 1, 1, 1 };
 
-    Grid3d(int nx, int ny, int nz, float hx, float hy, float hz) {
-        dimensions.x = nx;
-        dimensions.y = ny;
-        dimensions.z = nz;
+    Grid3d(Tindx nx, Tindx ny, Tindx nz, Tdata hx, Tdata hy, Tdata hz) {
+        dimensions = Dim3d<Tindx>(nx,ny,nz);
         h.x = hx;
         h.y = hy;
         h.z = hz;

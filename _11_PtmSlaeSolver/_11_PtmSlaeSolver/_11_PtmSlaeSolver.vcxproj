@@ -94,6 +94,8 @@
     <CudaCompile Include="threadsTest1.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dataStore.cpp" />
+    <ClCompile Include="Dim3d.cpp" />
     <ClCompile Include="mpiTests.cpp" />
     <ClCompile Include="openMPTests.cpp" />
   </ItemGroup>

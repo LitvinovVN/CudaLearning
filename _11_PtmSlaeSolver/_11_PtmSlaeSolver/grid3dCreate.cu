@@ -1,4 +1,5 @@
 #include "grid3d.cu"
+#include "DataStore.cpp"
 
 inline void grid3dCreate() {
 	std::cout << std::endl << "----- Создание объекта 3d сетки ----" << std::endl;
@@ -19,6 +20,21 @@ inline void grid3dCreate() {
 	std::cout << "Введите шаг сетки по оси Z: ";
 	std::cin >> hz;
 
-	Grid3d grid(nx, ny, nz, hx, hy, hz);
+	Grid3d<size_t, float> grid(nx, ny, nz, hx, hy, hz);
 	grid.print_dimensions();
+
+	DataStore<size_t, float> ds(grid.dimensions);
+	ds.data[0] = 4;
+	auto d0 = ds.data[0];
+	ds.dimensions.Print();
+	//ds.Print();
+	//ds.InitDataByZeros();
+	//ds.Print();
+	ds.InitDataByIndexes();
+	//ds.Print();
+	//ds.SaveToFile("DataStore.txt");
+
+	DataStore<size_t, float>  readedDataStore("DataStore.txt");
+	readedDataStore.Print();
+
 }

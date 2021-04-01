@@ -7,7 +7,7 @@ inline __device__ int returnsPlus2(int num)
     return num + 2;
 }
 
-inline __global__ void addKernel(int* c, const int* a, const int* b, Grid3d* g)
+inline __global__ void addKernel(int* c, const int* a, const int* b, Grid3d<size_t, float>* g)
 {
     int i = threadIdx.x;
     c[i] = a[i] + b[i];
@@ -64,7 +64,7 @@ inline cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int 
         goto Error;
     }
 
-    Grid3d g(10, 20, 30, 1.0, 1.0, 1.0);
+    Grid3d<size_t, float> g(10, 20, 30, 1.0, 1.0, 1.0);
 
     // Launch a kernel on the GPU with one thread for each element.
     addKernel << <1, size >> > (dev_c, dev_a, dev_b, &g);
