@@ -4,7 +4,7 @@
 inline void grid3dCreate() {
 	std::cout << std::endl << "----- Создание объекта 3d сетки ----" << std::endl;
 
-	int nx, ny, nz;
+	/*int nx, ny, nz;
 	std::cout << "Введите число узлов сетки по оси X: ";
 	std::cin >> nx;
 	std::cout << "Введите число узлов сетки по оси Y: ";
@@ -32,9 +32,12 @@ inline void grid3dCreate() {
 	//ds.Print();
 	ds.InitDataByIndexes();
 	//ds.Print();
-	//ds.SaveToFile("DataStore.txt");
+	//ds.SaveToFile("DataStore.txt");*/
 
+	std::cout << std::endl << "----- Считываение объекта DataStore<size_t, float> из файла DataStore.txt ----" << std::endl;
 	DataStore<size_t, float>  readedDataStore("DataStore.txt");
 	readedDataStore.Print();
+
+	readedDataStore.Print(Dim3d<size_t>{5,4,2}, Dim3d<size_t>{4, 1, 2});
 
 }

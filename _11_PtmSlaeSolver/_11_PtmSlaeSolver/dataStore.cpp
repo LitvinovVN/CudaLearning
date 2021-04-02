@@ -151,6 +151,67 @@ struct DataStore {
 		}			
 	}
 
+		
+	/// <summary>
+	/// Вывод в консоль фрагмента значений
+	/// </summary>
+	/// <param name="fragmentDim">Отображаемый фрагмент</param>
+	/// <param name="skippedFragmentDim">Пропускаемый фрагмент</param>
+	void Print(Dim3d<size_t> fragmentDim, Dim3d<size_t> skippedFragmentDim = Dim3d<size_t>{0, 0, 0}) {
+		printf("------------- Grid Fragment Printing -------------\n");
+		printf("fragmentDim.Print()\n");
+		fragmentDim.Print();
+		printf("skippedFragmentDim.Print()\n");
+		skippedFragmentDim.Print();
+		printf("Проверка диапазонов:\n");
+		
+		bool isCorrect = true;
+
+		if (skippedFragmentDim.x + fragmentDim.x > dimensions.x)
+		{
+			printf("Выход за границы по оси Ox!\n");
+			isCorrect = false;
+		}
+
+		if (skippedFragmentDim.y + fragmentDim.y > dimensions.y)
+		{
+			printf("Выход за границы по оси Oy!\n");
+			isCorrect = false;
+		}
+
+		if (skippedFragmentDim.z + fragmentDim.z > dimensions.z)
+		{
+			printf("Выход за границы по оси Oz!\n");
+			isCorrect = false;
+		}
+
+		if (!isCorrect)
+			return;
+
+		printf("ОК \n");
+
+		for (Tindx z = skippedFragmentDim.z; z < skippedFragmentDim.z + fragmentDim.z; z++)
+		{
+			printf("------------- z = %lld -------------\n", z);
+			printf("\t\t");
+			for (Tindx x = skippedFragmentDim.x; x < skippedFragmentDim.x + fragmentDim.x; x++)
+			{
+				printf("%lld\t\t", x);
+			}
+			printf("\n");
+
+			for (Tindx y = skippedFragmentDim.y; y < skippedFragmentDim.y + fragmentDim.y; y++)
+			{
+				printf("y = %lld:\t", y);
+				for (Tindx x = skippedFragmentDim.x; x < skippedFragmentDim.x + fragmentDim.x; x++)
+				{
+					printf("%lf\t", data[x + y * dimensions.x + z * dimensions.Nxy]);
+				}
+				printf("\n");
+			}
+		}
+	}
+
 	/// <summary>
 	/// Сохраняет массив в текстовый файл
 	/// </summary>
