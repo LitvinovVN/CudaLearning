@@ -392,6 +392,7 @@ __global__ void ptmKernel3(double* r, double* c0, double* c2, double* c4, double
 
 }
 
+
 /// <summary>
 /// ПТМ, проход от 0 до Nx+Ny+Nz, блоки XY + нити в блоке XY
 /// </summary>
