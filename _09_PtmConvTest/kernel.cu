@@ -13,14 +13,14 @@
 //#define SharedMemorySize 49152/sizeof(double) // Размерность массива распределённой памяти для одного слоя XY
 
 // Распределение потоков в плоскости XOZ
-#define BlockDimX 64 // Размерность блока по X задаём равной числу нитей в блоке
-#define BlockDimY 10  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
+#define BlockDimX 8 // Размерность блока по X задаём равной числу нитей в блоке
+#define BlockDimY 128  /*25000*/ /*SharedMemorySize/BlockSizeX*/ // Размерность блока по Z от 1 до CudaCoresNumber
 
-#define GridDimX 1 // Размерность сетки куда по X
-#define GridDimY 1 // Размерность сетки куда по Y
+#define GridDimX 1 // Размерность сетки cuda по X
+#define GridDimY 1 // Размерность сетки cuda по Y
 
 #define GridNx (BlockDimX * GridDimX + 1) // Размерность расчетной сетки по оси x
-#define GridNy 30000 // Размерность расчетной сетки по оси y
+#define GridNy 22000 // Размерность расчетной сетки по оси y
 #define GridNz (BlockDimY * GridDimY + 1) // Размерность расчетной сетки по оси z
 #define GridN GridNx * GridNy * GridNz // Суммарное число узлов расчетной сетки
 #define GridXY GridNx * GridNy // Число узлов в плоскости XY, т.е. в одном слое по Z
