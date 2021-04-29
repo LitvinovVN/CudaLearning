@@ -1,13 +1,263 @@
 @startuml
-abstract        abstract
-abstract class  "abstract class"
-annotation      annotation
-circle          circle
-()              circle_short_form
-class           class
-diamond         diamond
-<>              diamond_short_form
-entity          entity
-enum            enum
-interface       interface
+
+package "Nodes"
+{
+	'Класс ComputingNodes описывает все  вычислительные узлы
+	class  ComputingNodes #palegreen;line:green;line.dashed
+	{
+		nodes : vector<ComputingNode>
+	}
+
+	'Класс ComputingNode описывает все характеристики вычислительного узла
+	class  ComputingNode #palegreen;line:green;line.dashed
+	{
+		ipAddress : String
+		port : Int
+		index : Int
+		computingDevices : ComputingDevices
+		ramMemory : Float
+	}
+}
+
+package "Devices"
+{
+	'Класс ComputingDevices - массив вычислительных устройств
+	class  ComputingDevices #palegreen;line:green;line.dashed
+	{
+		devices : vector<ComputingDevice>
+	}
+
+	'Абстрактный класс ComputingDevice - родительский класс для двух классов
+	abstract class  ComputingDevice
+	{
+		devicePerformance : DevicePerformance
+		index : Int
+	}
+
+	'Класс ComputingDeviceCPU - класс  описывающий характеристики вычислительных CPU
+	class  ComputingDeviceCPU #palegreen;line:green;line.dashed
+	{
+		coreNumber : Int
+	}
+
+	'Класс ComputingDeviceGPU - класс  описывающий характеристики вычислительных GPU
+	class  ComputingDeviceGPU #palegreen;line:green;line.dashed
+	{
+		spNumber : Int
+		sharedMemory : Int
+	}
+
+	'Класс DevicePerformance - класс описывающий характеристики производительности вычислительного устройства
+	class  DevicePerformance #palegreen;line:green;line.dashed
+	{
+	}
+}
+
+package "Grid"
+{
+	'Абстрактный класс Grid - класс описывающий расчетную сетку
+	abstract class  Grid
+	{
+		gridBlocks : GridBlocks
+	}
+	'Класс Grid2D - класс  описывающий двумерную расчетную сетку
+	class  Grid2D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim2D<int, int>
+		step : Dim2D<float, float>
+	}
+
+	'Класс Grid3D - класс  описывающий трехмерную расчетную сетку
+	class  Grid3D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim3D<int, int, int>
+		step : Dim3D<float, float, float>
+	}
+
+	'Абстрактный класс GridBlocks - класс описывающий блоки расчетной сетки
+	abstract class GridBlocks
+	{
+		axisI : Axises
+	}
+
+	'Класс GridBlocks1D - класс  описывающий разбиение расчетной сетки на блоки по одному измерению
+	class GridBlocks1D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim1D<int>
+		gridBlocks : vector<GridBlock>
+	}
+
+	'Класс GridBlocks2D - класс  описывающий разбиение расчетной сетки на блоки по двум измерениям
+	class GridBlocks2D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim2D<int, int>		
+		axisJ : Axises
+		gridBlocks : vector<GridBlock>
+	}
+
+	'Класс GridBlocks3D - класс  описывающий разбиение расчетной сетки на блоки по трем измерениям
+	class GridBlocks3D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim3D<int, int, int>		
+		axisJ : Axises
+		axisK : Axises
+		gridBlocks : vector<GridBlock>
+	}
+
+	'Абстрактный класс GridBlock - класс описывающий блок расчетной сетки
+	abstract class GridBlock
+	{
+		indexStart : size_t
+		axisI : Axises
+	}
+
+	'Класс GridBlock2D - класс  описывающий двумерный блок расчетной сетки
+	class GridBlock2D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim2D<int, int>		
+		axisJ : Axises
+		blockFragments : vector<vector<GridBlock>>
+		nextBlocks : Dim2D<*GridBlock, *GridBlock>
+		prevBlocks : Dim2D<*GridBlock, *GridBlock>
+	}
+
+	'Класс GridBlock3D - класс  описывающий трехмерный блок расчетной сетки
+	class GridBlock3D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim3D<int, int, int>		
+		axisJ : Axises
+		axisK : Axises
+		blockFragments : vector<vector<vector<GridBlock>>>
+		nextBlocks : Dim3D<*GridBlock, *GridBlock, *GridBlock>
+		prevBlocks : Dim3D<*GridBlock, *GridBlock, *GridBlock>
+	}
+	'Перечисление  - класс описывающий данные для трехмерной расчетной сетки
+	enum Axises
+	{
+		x, y, z
+	}
+}
+
+package "Dim"
+{
+	'Абстрактный класс Dim - родительский класс для классов размерностей
+	abstract class Dim
+	{
+	}
+
+	'Класс Dim1D - класс описывающий данные для одномерной расчетной сетки
+	class  Dim1D #palegreen;line:green;line.dashed
+	{
+		i : <TypeA>
+	}
+
+	'Класс Dim2D - класс описывающий данные для двумерной расчетной сетки
+	class  Dim2D #palegreen;line:green;line.dashed
+	{
+		i : <TypeA>
+		j : <TypeA>
+	}
+
+	'Класс Dim3D - класс описывающий данные для трехмерной расчетной сетки
+	class  Dim3D #palegreen;line:green;line.dashed
+	{
+		i : <TypeA>
+		j : <TypeA>
+		k : <TypeA>
+	}
+	
+}
+
+package "LinearArrays"
+{
+	'Класс LinearArrays - хранилище всех массивов данных
+	class LinearArrays #palegreen;line:green;line.dashed
+	{
+		arrays : vector<LinearArray>
+	}
+
+	'Класс LinearArray - класс данных 
+	class LinearArray #palegreen;line:green;line.dashed
+	{
+		data : vector<TypeA>
+		dimensions : Dim
+	}
+
+	'Класс LinearArrayToGridBlockMappings - класс  сопоставления данных блокам расчетной сетки
+	class LinearArrayToGridBlockMappings #palegreen;line:green;line.dashed
+	{
+		mappings : vector<LinearArrayToGridBlockMapping>		
+	}
+
+	'Класс LinearArrayToGridBlockMapping - класс сопоставляющий каждому линейному массиву блок расчетной сетки
+	class  LinearArrayToGridBlockMapping  #palegreen;line:green;line.dashed
+	{
+		data : *LinearArrays
+		block : *GridBlock
+	}
+
+}
+
+
+package "Mappings"
+{
+	'Класс GridBlockToComputingNodeMappings - класс сохраняющий сопоставления блоков расчетной сетки вычислительным узлам
+	class GridBlockToComputingNodeMappings #palegreen;line:green;line.dashed
+	{
+		mappings : vector<GridBlockToComputingNodeMapping>	
+	}
+
+	'Класс GridBlockToComputingNodeMapping - класс сопоставляющий каждому блоку расчетной сетки вычислительный узел
+	class GridBlockToComputingNodeMapping #palegreen;line:green;line.dashed
+	{
+		block : *GridBlock
+		node : *ComputingNode
+	}
+
+	'Класс GridFragmentsToComputingDeviceMappings - класс сохраняющий сопоставления фрагментов блоков расчетной сетки вычислительным устройствам
+	class GridFragmentsToComputingDeviceMappings #palegreen;line:green;line.dashed
+	{ 
+		mappings : vector<GridFragmentsToComputingDeviceMapping>
+	}
+
+	'Класс GridFragmentsToComputingDeviceMapping - класс сопоставляющий каждому фрагменту расчетной сетки вычислительное устройство
+	class GridFragmentsToComputingDeviceMapping #palegreen;line:green;line.dashed
+	{
+		fragment : *GridBlock
+		device : *ComputingDevice
+	}
+}
+
+
+ComputingNodes *-right--- ComputingNode
+ComputingDevices *-- ComputingDevice
+ComputingDevice <|-- ComputingDeviceCPU
+ComputingDevice <|-- ComputingDeviceGPU
+ComputingDevices --* ComputingNode
+DevicePerformance --* ComputingDevice
+Grid <|-- Grid2D
+Grid <|-- Grid3D
+Dim <|-- Dim1D
+Dim <|-- Dim2D
+Dim <|-- Dim3D
+GridBlocks <|-- GridBlocks1D
+GridBlocks <|-- GridBlocks2D
+GridBlocks <|-- GridBlocks3D
+GridBlocks --* Grid
+GridBlock --* GridBlocks1D
+GridBlock --* GridBlocks2D
+GridBlock --* GridBlocks3D
+GridBlock <|-- GridBlock2D
+GridBlock <|-- GridBlock3D
+GridBlockToComputingNodeMapping --* GridBlockToComputingNodeMappings
+GridBlock --*  GridBlockToComputingNodeMapping
+ComputingNode --*  GridBlockToComputingNodeMapping
+GridFragmentsToComputingDeviceMapping --* GridFragmentsToComputingDeviceMappings
+GridFragmentsToComputingDeviceMapping *---up- ComputingDevice
+GridBlock -up---*  GridFragmentsToComputingDeviceMapping
+LinearArrayToGridBlockMapping *-- LinearArrays
+LinearArrayToGridBlockMapping *---down- GridBlock
+LinearArrayToGridBlockMappings *-- LinearArrayToGridBlockMapping
+LinearArray -up---* LinearArrays
+
 @enduml
