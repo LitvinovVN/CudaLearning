@@ -139,7 +139,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Dim.cpp" />
+    <ClCompile Include="Dim1D.cpp" />
     <ClCompile Include="DistributedSlaeSolver.Console.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Dim.h" />
+    <ClInclude Include="Dim1D.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
