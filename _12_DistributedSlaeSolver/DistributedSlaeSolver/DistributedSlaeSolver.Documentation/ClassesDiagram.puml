@@ -76,21 +76,22 @@ package "Grid"
 
 	'Абстрактный класс GridBlocks - класс описывающий блоки расчетной сетки
 	abstract class GridBlocks
-	{
-		axisI : Axises
+	{		
 	}
 
 	'Класс GridBlocks1D - класс  описывающий разбиение расчетной сетки на блоки по одному измерению
 	class GridBlocks1D #palegreen;line:green;line.dashed
 	{
 		dimension : Dim1D<int>
+		axisI : Axises
 		gridBlocks : vector<GridBlock>
 	}
 
 	'Класс GridBlocks2D - класс  описывающий разбиение расчетной сетки на блоки по двум измерениям
 	class GridBlocks2D #palegreen;line:green;line.dashed
 	{
-		dimension : Dim2D<int, int>		
+		dimension : Dim2D<int, int>
+		axisI : Axises
 		axisJ : Axises
 		gridBlocks : vector<GridBlock>
 	}
@@ -98,7 +99,8 @@ package "Grid"
 	'Класс GridBlocks3D - класс  описывающий разбиение расчетной сетки на блоки по трем измерениям
 	class GridBlocks3D #palegreen;line:green;line.dashed
 	{
-		dimension : Dim3D<int, int, int>		
+		dimension : Dim3D<int, int, int>
+		axisI : Axises
 		axisJ : Axises
 		axisK : Axises
 		gridBlocks : vector<GridBlock>
@@ -111,10 +113,21 @@ package "Grid"
 		axisI : Axises
 	}
 
+	'Класс GridBlock1D - класс описывающий одномерный блок расчетной сетки
+	class GridBlock1D #palegreen;line:green;line.dashed
+	{
+		dimension : Dim1D<int>
+		axisI : Axises		
+		blockFragments : vector<GridBlock>
+		nextBlocks : Dim1D<*GridBlock>
+		prevBlocks : Dim1D<*GridBlock>
+	}
+
 	'Класс GridBlock2D - класс  описывающий двумерный блок расчетной сетки
 	class GridBlock2D #palegreen;line:green;line.dashed
 	{
-		dimension : Dim2D<int, int>		
+		dimension : Dim2D<int, int>
+		axisI : Axises
 		axisJ : Axises
 		blockFragments : vector<vector<GridBlock>>
 		nextBlocks : Dim2D<*GridBlock, *GridBlock>
@@ -124,7 +137,8 @@ package "Grid"
 	'Класс GridBlock3D - класс  описывающий трехмерный блок расчетной сетки
 	class GridBlock3D #palegreen;line:green;line.dashed
 	{
-		dimension : Dim3D<int, int, int>		
+		dimension : Dim3D<int, int, int>
+		axisI : Axises
 		axisJ : Axises
 		axisK : Axises
 		blockFragments : vector<vector<vector<GridBlock>>>
@@ -247,6 +261,7 @@ GridBlocks --* Grid
 GridBlock --* GridBlocks1D
 GridBlock --* GridBlocks2D
 GridBlock --* GridBlocks3D
+GridBlock <|-- GridBlock1D
 GridBlock <|-- GridBlock2D
 GridBlock <|-- GridBlock3D
 GridBlockToComputingNodeMapping --* GridBlockToComputingNodeMappings
