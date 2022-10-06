@@ -1,1 +1,1 @@
-nvcc 1.cu
+nvcc 01.cu

@@ -1,0 +1,1 @@
+[https://cpp.com.ru Шилдт. printf()](https://cpp.com.ru/shildt_spr_po_c/08/0804.html)
