@@ -122,6 +122,7 @@ __global__ void cuda_fragment_print(grid_fragment* fragment)
     printf("\n-----cuda_fragment_print----\n");
     
     printf("fragment->dimension = %d\n", fragment->dimension);
+    printf("&(fragment->sizes) = %p\n",&(fragment->sizes));
     printf("fragment->sizes = {");
     for(int i = 0; i < fragment->dimension; i++)
         printf("%d ", fragment->sizes[i]);
@@ -162,8 +163,8 @@ grid_fragment* grid_fragment_copy_host_to_device(grid_fragment* fragment)
 {    
     // Указатель на массив размерностей sizes в GPU
     int *dev_f3d1_sizes;
-    cudaMalloc((void**)&dev_f3d1_sizes, 3 * sizeof(int));
-    cudaMemcpy(dev_f3d1_sizes, fragment->sizes, 3 * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&dev_f3d1_sizes, fragment->dimension * sizeof(int));
+    cudaMemcpy(dev_f3d1_sizes, fragment->sizes, fragment->dimension * sizeof(int), cudaMemcpyHostToDevice);
 
     // Указатель на массив данных data в GPU
     float *dev_f3d1_data;
@@ -189,17 +190,28 @@ grid_fragment* grid_fragment_copy_host_to_device(grid_fragment* fragment)
 /// @return 
 grid_fragment* grid_fragment_copy_device_to_host(grid_fragment* dev_fragment)
 {
+    printf("grid_fragment_copy_device_to_host START\n");
     // Фрагмент в ОЗУ, подготовленный к копированию из GPU
     grid_fragment *dto_fragment = (grid_fragment*)malloc(sizeof(grid_fragment));
     cudaMemcpy(dto_fragment, dev_fragment, sizeof(grid_fragment), cudaMemcpyDeviceToHost);
         
     // Указатель на массив размерностей sizes в ОЗУ
-    int* fragment_sizes = (int*) malloc(dto_fragment->dimension * sizeof(int));     
-    cudaMemcpy(fragment_sizes, &dev_fragment->sizes, dto_fragment->dimension * sizeof(int), cudaMemcpyDeviceToHost);
-    dto_fragment->sizes = fragment_sizes;
-    printf("fragment_sizes[0] = %d\n",fragment_sizes[0]);
+    int* fragment_sizes = (int*) malloc(dto_fragment->dimension * sizeof(int));
+    fragment_sizes[0] = 0;
+    fragment_sizes[1] = -1;
+    fragment_sizes[2] = -2;
+    printf("\t-----fragment_sizes[2] = %d\n",fragment_sizes[2]);
+    printf("\t-----&(dev_fragment->sizes) = %p\n",&(dev_fragment->sizes));
 
-    //grid_fragment_print(dto_fragment);       
+    cudaError_t err1 = cudaMemcpy(fragment_sizes, dev_fragment->sizes, dto_fragment->dimension * sizeof(int), cudaMemcpyDeviceToHost);
+    printf(cudaGetErrorString (err1));
+    printf("\t-----fragment_sizes[2] = %d\n",fragment_sizes[2]);
+
+    dto_fragment->sizes = fragment_sizes;
+    
+    
+
+    grid_fragment_print(dto_fragment);       
     // Указатель на массив данных data в ОЗУ
     float *fragment_data = (float*) malloc(dto_fragment->data_num * sizeof(float));    
     cudaMemcpy(fragment_data, &dev_fragment->data, dto_fragment->data_num * sizeof(float), cudaMemcpyDeviceToHost);

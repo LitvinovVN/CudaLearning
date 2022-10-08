@@ -1,3 +1,8 @@
+// Задача 01. Вывести с помощью GPU текстовую строку "Hello World from GPU!"
+// Запуск:
+// nvcc 001.cu
+// ./a
+
 #include <iostream>
 
 __global__ void cuda_hello(){
