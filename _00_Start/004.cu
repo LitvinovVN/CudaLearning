@@ -37,12 +37,11 @@ int main() {
     cudaMemcpy(dev_arrFloat, arrFloat, N * sizeof(float), cudaMemcpyHostToDevice);
 
     cuda_array_add<<<1,1>>>(dev_arrFloat, N);
-    cudaDeviceSynchronize();
+
     cudaError_t err1 = cudaMemcpy(arrFloat, dev_arrFloat, N * sizeof(float), cudaMemcpyDeviceToHost);
     printf(cudaGetErrorString (err1));
-    cudaDeviceSynchronize();
 
-    printf("-----------------------\n");
+    printf("\n-----------------------\n");
     for(int i = 0; i < N; i++)
     {        
         printf("arrFloat[%i] = %f\n", i, arrFloat[i]);
