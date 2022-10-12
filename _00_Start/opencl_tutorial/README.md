@@ -1,0 +1,1 @@
+[OpenCL on Visual Studio : Configuration tutorial for the confused / Pratik Anand](https://medium.com/@pratikone/opencl-on-visual-studio-configuration-tutorial-for-the-confused-3ec1c2b5f0ca)
