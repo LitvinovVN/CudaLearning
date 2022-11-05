@@ -187,7 +187,7 @@ int main()
     Arrays1DList arrays1DListGPU = Arrays1DList_copy_to_GPU(arrays1DList);
         
     printArrays1DListKernel<<< 1, 1 >>>( arrays1DListGPU );
-    
+    printf("++++++++++\n");
     //Array1D array1D_RAM_result = Array1D_copy_GPU_to_RAM(array1D_GPU);
     //Array1D_print(array1D_RAM_result);
 
